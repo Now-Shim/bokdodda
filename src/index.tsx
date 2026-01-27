@@ -1,273 +1,182 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/cloudflare-workers'
 
-type Bindings = {
-  DB: D1Database;
-}
+// Mock Database (메모리 내 데이터)
+const users = [
+  { id: 1, email: 'admin@coaching.com', name: '최호석 센터장', password: 'admin123', role: 'admin', phone: '010-4652-8936' },
+  { id: 2, email: 'planner01@coaching.com', name: '이영수', password: 'demo123', role: 'planner', phone: '010-1001-0001' },
+  { id: 3, email: 'planner02@coaching.com', name: '박민지', password: 'demo123', role: 'planner', phone: '010-1002-0002' },
+  { id: 4, email: 'planner03@coaching.com', name: '김철수', password: 'demo123', role: 'planner', phone: '010-1003-0003' },
+]
 
-const app = new Hono<{ Bindings: Bindings }>()
+const plannerProfiles = [
+  { id: 1, userId: 2, personalityType: 'ESTJ', salesStyle: '분석적', experienceYears: 5, specialization: '생명보험', strengths: '체계적인 상품 설명, 논리적 설득', weaknesses: '감성적 공감 부족', totalCoachingSessions: 15, totalTrainingCompleted: 3 },
+  { id: 2, userId: 3, personalityType: 'ENFP', salesStyle: '관계중심', experienceYears: 3, specialization: '손해보험', strengths: '친근한 관계 형성, 고객 니즈 파악', weaknesses: '계약 클로징 약함', totalCoachingSessions: 8, totalTrainingCompleted: 2 },
+  { id: 3, userId: 4, personalityType: 'ISTJ', salesStyle: '공격적', experienceYears: 8, specialization: '생명보험', strengths: '빠른 계약 체결, 목표 달성력', weaknesses: '장기 관계 유지 어려움', totalCoachingSessions: 22, totalTrainingCompleted: 4 },
+]
 
-// Enable CORS
+const coachingSessions = [
+  {
+    id: 1,
+    plannerId: 2,
+    sessionDate: '2025-01-20T10:30:00',
+    context: '신규 고객과 첫 만남에서 보험 이야기를 꺼내자마자 거부감을 보였습니다. 어떻게 접근해야 할까요?',
+    situationType: '신규고객',
+    aiAnalysis: '고객이 보험에 대한 선입견이나 부정적 경험이 있을 가능성. 직접적인 상품 제안보다는 관계 형성 우선 필요.',
+    coachingAdvice: '첫 만남에서는 보험 이야기를 최소화하고, 고객의 현재 상황과 걱정거리를 경청하세요. "어떤 부분이 가장 걱정되세요?" 같은 열린 질문으로 시작하고, 2-3회 만남 후 자연스럽게 보험 이야기를 꺼내세요.',
+    recommendedApproach: '1차 만남: 관계 구축 및 경청\n2차 만남: 고객 니즈 파악\n3차 만남: 솔루션으로서 보험 소개',
+    tacitKnowledgeApplied: '[30년 노하우] 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다. 진정한 관심을 보이고 천천히 접근하세요.',
+    isShared: true,
+    effectivenessRating: 5,
+    plannerFeedback: '정말 도움되었습니다. 천천히 접근했더니 3번째 만남에서 고객이 먼저 보험 상담을 요청했어요!'
+  },
+  {
+    id: 2,
+    plannerId: 3,
+    sessionDate: '2025-01-22T14:00:00',
+    context: '기존 고객이 보험료가 부담된다며 해지를 고려하고 있습니다. 어떻게 설득해야 할까요?',
+    situationType: '기존고객',
+    aiAnalysis: '경제적 어려움으로 인한 해지 고려. 단순 설득보다는 고객 상황 이해와 실질적 해결책 제시 필요.',
+    coachingAdvice: '먼저 고객의 경제적 상황을 공감하고, 해지의 불이익을 설명하기보다는 대안을 제시하세요. 보장 축소, 보험료 감액, 납입 유예 등의 옵션을 함께 검토하세요.',
+    recommendedApproach: '1. 공감 표현: "요즘 경제적으로 많이 어려우시죠?"\n2. 대안 제시: 보험료 조정 옵션 설명\n3. 핵심 보장 유지: 최소한의 보장 강조',
+    tacitKnowledgeApplied: '[30년 노하우] 해지를 막으려고만 하면 고객은 더 멀어집니다. 고객 입장에서 최선의 방법을 함께 찾아주면, 나중에 상황이 나아졌을 때 다시 찾아옵니다.',
+    isShared: true,
+    effectivenessRating: 4,
+    plannerFeedback: '고객이 감동해서 일부만 줄이고 유지하기로 했습니다. 감사합니다.'
+  },
+]
+
+const trainingPrograms = [
+  { id: 1, title: '신규 고객 개척 전략', description: '체계적인 신규 고객 개척 방법론과 실전 기법', category: '영업기법', difficulty: 'beginner', durationMinutes: 120, enrollmentCount: 45, completionCount: 32 },
+  { id: 2, title: '클로징 기법 마스터', description: '계약 성사를 위한 고급 클로징 기법', category: '영업기법', difficulty: 'advanced', durationMinutes: 180, enrollmentCount: 28, completionCount: 15 },
+  { id: 3, title: '장기 고객 관계 관리', description: '고객 이탈 방지와 지속적인 관계 유지 전략', category: '고객관리', difficulty: 'intermediate', durationMinutes: 90, enrollmentCount: 52, completionCount: 38 },
+  { id: 4, title: '보험 상품 지식 심화', description: '생명보험 및 손해보험 상품의 심화 이해', category: '상품지식', difficulty: 'intermediate', durationMinutes: 150, enrollmentCount: 67, completionCount: 45 },
+  { id: 5, title: '감성 영업 커뮤니케이션', description: '고객의 감성을 이해하고 공감하는 커뮤니케이션', category: '고객관리', difficulty: 'beginner', durationMinutes: 100, enrollmentCount: 41, completionCount: 29 },
+]
+
+const app = new Hono()
+
+// CORS 설정
 app.use('/api/*', cors())
 
-// ===== API Routes =====
+// Static files
+app.use('/static/*', serveStatic({ root: './' }))
 
-// 로그인 (간단한 데모용 - 실제로는 JWT 등 사용)
-app.post('/api/auth/login', async (c) => {
+// ============== API Routes ==============
+
+// 로그인
+app.post('/api/login', async (c) => {
   const { email, password } = await c.req.json()
-  
-  const user = await c.env.DB.prepare(`
-    SELECT id, email, name, role FROM users 
-    WHERE email = ? AND password_hash = ?
-  `).bind(email, `demo_hash_${password}`).first()
+  const user = users.find(u => u.email === email && u.password === password)
   
   if (!user) {
-    return c.json({ error: '이메일 또는 비밀번호가 잘못되었습니다' }, 401)
+    return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
   }
-  
-  return c.json({ user })
-})
-
-// 설계사 대시보드 데이터
-app.get('/api/planner/dashboard/:userId', async (c) => {
-  const userId = c.req.param('userId')
-  
-  // 프로필 정보
-  const profile = await c.env.DB.prepare(`
-    SELECT u.*, p.* 
-    FROM users u
-    LEFT JOIN planner_profiles p ON u.id = p.user_id
-    WHERE u.id = ?
-  `).bind(userId).first()
-  
-  // 최근 코칭 세션
-  const recentSessions = await c.env.DB.prepare(`
-    SELECT * FROM coaching_sessions 
-    WHERE planner_id = ? 
-    ORDER BY session_date DESC 
-    LIMIT 5
-  `).bind(userId).all()
-  
-  // 진행 중인 교육
-  const ongoingTraining = await c.env.DB.prepare(`
-    SELECT e.*, t.title, t.category, t.duration_minutes
-    FROM training_enrollments e
-    JOIN training_programs t ON e.program_id = t.id
-    WHERE e.planner_id = ? AND e.status IN ('enrolled', 'in_progress')
-    ORDER BY e.enrolled_at DESC
-  `).bind(userId).all()
-  
-  // 완료한 교육 수
-  const completedTrainingCount = await c.env.DB.prepare(`
-    SELECT COUNT(*) as count FROM training_enrollments 
-    WHERE planner_id = ? AND status = 'completed'
-  `).bind(userId).first()
-  
-  return c.json({
-    profile,
-    recentSessions: recentSessions.results,
-    ongoingTraining: ongoingTraining.results,
-    stats: {
-      totalCoachingSessions: profile.total_coaching_sessions || 0,
-      completedTraining: completedTrainingCount.count || 0
-    }
-  })
-})
-
-// 새로운 코칭 요청
-app.post('/api/coaching/new', async (c) => {
-  const { planner_id, context, situation_type } = await c.req.json()
-  
-  // AI 분석 (실제로는 OpenAI API 등 사용, 여기서는 데모)
-  const aiAnalysis = `상황 분석: ${situation_type}에 대한 ${context.substring(0, 50)}... 상황입니다.`
-  const coachingAdvice = `[AI 코칭] 이 상황에서는 먼저 고객의 입장을 충분히 이해하고 공감하는 것이 중요합니다. 30년 현장 경험에 비추어 볼 때, 이런 상황에서는...`
-  const recommendedApproach = `1단계: 경청과 공감\n2단계: 니즈 파악\n3단계: 솔루션 제시`
-  const tacitKnowledge = `[30년 노하우] 이런 상황에서 경험상 중요한 것은 성급하게 답을 주려 하지 말고, 고객이 스스로 깨닫도록 돕는 것입니다.`
-  
-  const result = await c.env.DB.prepare(`
-    INSERT INTO coaching_sessions 
-    (planner_id, context, situation_type, ai_analysis, coaching_advice, recommended_approach, tacit_knowledge_applied)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    planner_id, 
-    context, 
-    situation_type, 
-    aiAnalysis, 
-    coachingAdvice, 
-    recommendedApproach, 
-    tacitKnowledge
-  ).run()
-  
-  // 설계사 프로필 통계 업데이트
-  await c.env.DB.prepare(`
-    UPDATE planner_profiles 
-    SET total_coaching_sessions = total_coaching_sessions + 1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = ?
-  `).bind(planner_id).run()
   
   return c.json({ 
     success: true, 
-    sessionId: result.meta.last_row_id,
-    coaching: {
-      ai_analysis: aiAnalysis,
-      coaching_advice: coachingAdvice,
-      recommended_approach: recommendedApproach,
-      tacit_knowledge_applied: tacitKnowledge
-    }
+    user: { id: user.id, email: user.email, name: user.name, role: user.role }
   })
 })
 
-// 코칭 피드백 제출
-app.post('/api/coaching/feedback', async (c) => {
-  const { session_id, feedback, rating, is_shared } = await c.req.json()
+// 설계사 프로필 조회
+app.get('/api/planner/:id', (c) => {
+  const id = parseInt(c.req.param('id'))
+  const user = users.find(u => u.id === id && u.role === 'planner')
+  const profile = plannerProfiles.find(p => p.userId === id)
   
-  await c.env.DB.prepare(`
-    UPDATE coaching_sessions 
-    SET planner_feedback = ?, 
-        effectiveness_rating = ?,
-        is_shared = ?
-    WHERE id = ?
-  `).bind(feedback, rating, is_shared ? 1 : 0, session_id).run()
-  
-  // 플랫폼 학습 데이터에 추가 (재학습용)
-  if (rating >= 4) {
-    const session = await c.env.DB.prepare(`
-      SELECT * FROM coaching_sessions WHERE id = ?
-    `).bind(session_id).first()
-    
-    await c.env.DB.prepare(`
-      INSERT INTO platform_learning_data 
-      (situation_context, coaching_provided, effectiveness_score, planner_satisfaction, source_session_id, is_validated)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).bind(
-      session.context,
-      session.coaching_advice,
-      rating / 5.0,
-      rating,
-      session_id
-    ).run()
+  if (!user || !profile) {
+    return c.json({ error: '설계사를 찾을 수 없습니다.' }, 404)
   }
   
-  return c.json({ success: true })
+  return c.json({ user, profile })
 })
 
-// 모든 교육 프로그램 조회
-app.get('/api/training/programs', async (c) => {
-  const programs = await c.env.DB.prepare(`
-    SELECT * FROM training_programs 
-    WHERE is_active = 1 
-    ORDER BY category, difficulty
-  `).all()
-  
-  return c.json({ programs: programs.results })
+// 설계사별 코칭 세션 목록
+app.get('/api/coaching-sessions/:plannerId', (c) => {
+  const plannerId = parseInt(c.req.param('plannerId'))
+  const sessions = coachingSessions.filter(s => s.plannerId === plannerId)
+  return c.json({ sessions })
 })
 
-// 교육 프로그램 등록
-app.post('/api/training/enroll', async (c) => {
-  const { planner_id, program_id } = await c.req.json()
+// 새로운 코칭 요청
+app.post('/api/coaching-sessions', async (c) => {
+  const { plannerId, context, situationType } = await c.req.json()
   
-  try {
-    await c.env.DB.prepare(`
-      INSERT INTO training_enrollments (planner_id, program_id, status, progress_percent)
-      VALUES (?, ?, 'enrolled', 0)
-    `).bind(planner_id, program_id).run()
-    
-    // 교육 프로그램 등록 수 증가
-    await c.env.DB.prepare(`
-      UPDATE training_programs 
-      SET enrollment_count = enrollment_count + 1 
-      WHERE id = ?
-    `).bind(program_id).run()
-    
-    return c.json({ success: true })
-  } catch (error) {
-    return c.json({ error: '이미 등록된 프로그램입니다' }, 400)
+  // 간단한 AI 코칭 로직 (실제로는 외부 AI API 호출)
+  const newSession = {
+    id: coachingSessions.length + 1,
+    plannerId,
+    sessionDate: new Date().toISOString(),
+    context,
+    situationType,
+    aiAnalysis: '상황을 분석 중입니다. 고객의 행동 패턴과 현재 상황을 고려한 접근이 필요합니다.',
+    coachingAdvice: '먼저 고객의 입장에서 생각해보세요. 그들의 진짜 니즈가 무엇인지 파악하는 것이 첫 단계입니다.',
+    recommendedApproach: '1. 경청하기\n2. 공감 표현하기\n3. 해결책 제시하기',
+    tacitKnowledgeApplied: '[30년 노하우] 서두르지 마세요. 고객과의 신뢰가 가장 중요합니다.',
+    isShared: false,
+    effectivenessRating: null,
+    plannerFeedback: null
   }
+  
+  coachingSessions.push(newSession)
+  return c.json({ success: true, session: newSession })
 })
 
-// 관리자 대시보드 데이터
-app.get('/api/admin/dashboard', async (c) => {
-  // 전체 설계사 수
-  const plannerCount = await c.env.DB.prepare(`
-    SELECT COUNT(*) as count FROM users WHERE role = 'planner'
-  `).first()
+// 코칭 세션 피드백 제출
+app.post('/api/coaching-sessions/:id/feedback', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { effectivenessRating, feedback } = await c.req.json()
   
-  // 공유된 코칭 세션
-  const sharedSessions = await c.env.DB.prepare(`
-    SELECT cs.*, u.name as planner_name, u.email
-    FROM coaching_sessions cs
-    JOIN users u ON cs.planner_id = u.id
-    WHERE cs.is_shared = 1
-    ORDER BY cs.session_date DESC
-    LIMIT 20
-  `).all()
+  const session = coachingSessions.find(s => s.id === id)
+  if (!session) {
+    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+  }
   
-  // 인사이트
-  const insights = await c.env.DB.prepare(`
-    SELECT i.*, cs.context, u.name as planner_name
-    FROM admin_insights i
-    JOIN coaching_sessions cs ON i.coaching_session_id = cs.id
-    JOIN users u ON cs.planner_id = u.id
-    ORDER BY i.created_at DESC
-    LIMIT 10
-  `).all()
+  session.effectivenessRating = effectivenessRating
+  session.plannerFeedback = feedback
   
-  // 플랫폼 통계
-  const totalSessions = await c.env.DB.prepare(`
-    SELECT COUNT(*) as count FROM coaching_sessions
-  `).first()
-  
-  const avgEffectiveness = await c.env.DB.prepare(`
-    SELECT AVG(effectiveness_rating) as avg FROM coaching_sessions 
-    WHERE effectiveness_rating IS NOT NULL
-  `).first()
+  return c.json({ success: true, session })
+})
+
+// 교육 프로그램 목록
+app.get('/api/training-programs', (c) => {
+  return c.json({ programs: trainingPrograms })
+})
+
+// 관리자 대시보드 - 전체 통계
+app.get('/api/admin/dashboard', (c) => {
+  const totalPlanners = users.filter(u => u.role === 'planner').length
+  const totalSessions = coachingSessions.length
+  const sharedSessions = coachingSessions.filter(s => s.isShared).length
+  const avgRating = coachingSessions
+    .filter(s => s.effectivenessRating !== null)
+    .reduce((sum, s) => sum + s.effectivenessRating, 0) / 
+    coachingSessions.filter(s => s.effectivenessRating !== null).length
   
   return c.json({
-    stats: {
-      totalPlanners: plannerCount.count,
-      totalCoachingSessions: totalSessions.count,
-      averageEffectiveness: avgEffectiveness.avg || 0
-    },
-    sharedSessions: sharedSessions.results,
-    insights: insights.results
+    totalPlanners,
+    totalSessions,
+    sharedSessions,
+    avgRating: avgRating.toFixed(1),
+    totalPrograms: trainingPrograms.length
   })
 })
 
-// 관리자: 인사이트 생성
-app.post('/api/admin/insights', async (c) => {
-  const { coaching_session_id, admin_id, insight_type, insight_content, recommended_programs, priority } = await c.req.json()
+// 관리자 - 공유된 코칭 세션 목록
+app.get('/api/admin/shared-sessions', (c) => {
+  const shared = coachingSessions
+    .filter(s => s.isShared)
+    .map(s => {
+      const planner = users.find(u => u.id === s.plannerId)
+      return { ...s, plannerName: planner?.name }
+    })
   
-  await c.env.DB.prepare(`
-    INSERT INTO admin_insights 
-    (coaching_session_id, admin_id, insight_type, insight_content, recommended_programs, priority)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(
-    coaching_session_id,
-    admin_id,
-    insight_type,
-    insight_content,
-    recommended_programs,
-    priority
-  ).run()
-  
-  return c.json({ success: true })
+  return c.json({ sessions: shared })
 })
 
-// 설계사 목록 (관리자용)
-app.get('/api/admin/planners', async (c) => {
-  const planners = await c.env.DB.prepare(`
-    SELECT u.*, p.*
-    FROM users u
-    LEFT JOIN planner_profiles p ON u.id = p.user_id
-    WHERE u.role = 'planner'
-    ORDER BY u.name
-  `).all()
-  
-  return c.json({ planners: planners.results })
-})
-
-// ===== HTML Pages =====
+// ============== Frontend Routes ==============
 
 // 메인 페이지 (로그인)
 app.get('/', (c) => {
@@ -280,53 +189,47 @@ app.get('/', (c) => {
         <title>보험 설계사 AI 코칭 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <style>
-            .gradient-bg {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            }
-        </style>
     </head>
-    <body class="bg-gray-100">
-        <div class="min-h-screen flex items-center justify-center gradient-bg">
-            <div class="bg-white p-8 rounded-lg shadow-2xl w-96">
+    <body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full mx-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
                 <div class="text-center mb-8">
-                    <i class="fas fa-brain text-6xl text-purple-600 mb-4"></i>
-                    <h1 class="text-2xl font-bold text-gray-800">AI 코칭 플랫폼</h1>
-                    <p class="text-gray-600 mt-2">보험 설계사 전문 교육 시스템</p>
+                    <div class="inline-block p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
+                        <i class="fas fa-brain text-white text-4xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">AI 코칭 플랫폼</h1>
+                    <p class="text-gray-600">보험 설계사를 위한 현장 코칭</p>
                 </div>
                 
                 <form id="loginForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-gray-700 font-semibold mb-2">
                             <i class="fas fa-envelope mr-2"></i>이메일
                         </label>
                         <input type="email" id="email" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="example@coaching.com">
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="email@example.com">
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-gray-700 font-semibold mb-2">
                             <i class="fas fa-lock mr-2"></i>비밀번호
                         </label>
                         <input type="password" id="password" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="••••••••">
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="비밀번호">
                     </div>
                     
-                    <button type="submit" 
-                        class="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition duration-200 font-semibold">
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition duration-200">
                         <i class="fas fa-sign-in-alt mr-2"></i>로그인
                     </button>
                 </form>
                 
-                <div class="mt-6 p-4 bg-blue-50 rounded-lg text-sm">
-                    <p class="font-semibold text-blue-800 mb-2">데모 계정:</p>
-                    <p class="text-blue-700">설계사: planner01@coaching.com / 01</p>
-                    <p class="text-blue-700">관리자: admin@coaching.com / admin</p>
-                </div>
-                
-                <div id="errorMessage" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden">
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <p class="text-sm font-semibold text-blue-800 mb-2">데모 계정:</p>
+                    <p class="text-xs text-blue-700">관리자: admin@coaching.com / admin123</p>
+                    <p class="text-xs text-blue-700">설계사: planner01@coaching.com / demo123</p>
                 </div>
             </div>
         </div>
@@ -334,30 +237,24 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script>
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const errorDiv = document.getElementById('errorMessage');
+                e.preventDefault()
+                const email = document.getElementById('email').value
+                const password = document.getElementById('password').value
                 
                 try {
-                    const response = await axios.post('/api/auth/login', { email, password });
-                    const { user } = response.data;
-                    
-                    // 사용자 정보 저장
-                    localStorage.setItem('user', JSON.stringify(user));
-                    
-                    // 역할에 따라 리다이렉트
-                    if (user.role === 'planner') {
-                        window.location.href = '/planner';
-                    } else if (user.role === 'admin') {
-                        window.location.href = '/admin';
+                    const response = await axios.post('/api/login', { email, password })
+                    if (response.data.success) {
+                        localStorage.setItem('user', JSON.stringify(response.data.user))
+                        if (response.data.user.role === 'admin') {
+                            window.location.href = '/admin'
+                        } else {
+                            window.location.href = '/planner'
+                        }
                     }
                 } catch (error) {
-                    errorDiv.textContent = error.response?.data?.error || '로그인에 실패했습니다';
-                    errorDiv.classList.remove('hidden');
+                    alert(error.response?.data?.error || '로그인 실패')
                 }
-            });
+            })
         </script>
     </body>
     </html>
@@ -367,608 +264,449 @@ app.get('/', (c) => {
 // 설계사 대시보드
 app.get('/planner', (c) => {
   return c.html(`
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>설계사 대시보드</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <nav class="bg-purple-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center">
-                <i class="fas fa-brain text-2xl mr-3"></i>
-                <span class="text-xl font-bold">AI 코칭 플랫폼</span>
-            </div>
-            <div>
-                <span id="userName" class="mr-4"></span>
-                <button onclick="logout()" class="bg-purple-700 px-4 py-2 rounded hover:bg-purple-800">
-                    <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold mb-6">나의 대시보드</h1>
-        
-        <!-- 통계 카드 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-comments text-4xl text-blue-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">총 코칭 세션</p>
-                        <p id="totalSessions" class="text-2xl font-bold">-</p>
-                    </div>
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>설계사 대시보드 - AI 코칭 플랫폼</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-50">
+        <!-- 네비게이션 -->
+        <nav class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-brain text-2xl"></i>
+                    <h1 class="text-xl font-bold">AI 코칭 플랫폼</h1>
                 </div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-graduation-cap text-4xl text-green-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">완료한 교육</p>
-                        <p id="completedTraining" class="text-2xl font-bold">-</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-chart-line text-4xl text-purple-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">평균 효과성</p>
-                        <p id="avgEffectiveness" class="text-2xl font-bold">-</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 새 코칭 요청 버튼 -->
-        <button onclick="showCoachingModal()" 
-            class="bg-purple-600 text-white px-6 py-3 rounded-lg mb-6 hover:bg-purple-700 text-lg font-semibold">
-            <i class="fas fa-plus-circle mr-2"></i>새 코칭 요청하기
-        </button>
-
-        <!-- 최근 코칭 세션 -->
-        <div class="bg-white p-6 rounded-lg shadow mb-6">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-history mr-2"></i>최근 코칭 세션
-            </h2>
-            <div id="recentSessions" class="space-y-4">
-                <!-- 동적 로딩 -->
-            </div>
-        </div>
-
-        <!-- 진행 중인 교육 -->
-        <div class="bg-white p-6 rounded-lg shadow mb-6">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-book-reader mr-2"></i>진행 중인 교육
-            </h2>
-            <div id="ongoingTraining" class="space-y-4">
-                <!-- 동적 로딩 -->
-            </div>
-        </div>
-
-        <!-- 교육 프로그램 찾아보기 -->
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-search mr-2"></i>교육 프로그램 찾아보기
-            </h2>
-            <div id="allPrograms" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- 동적 로딩 -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 코칭 요청 모달 -->
-    <div id="coachingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg max-w-2xl w-full mx-4">
-            <h3 class="text-2xl font-bold mb-4">AI 코칭 요청</h3>
-            <form id="coachingForm">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">상황 유형</label>
-                    <select id="situationType" class="w-full p-2 border rounded">
-                        <option value="신규고객">신규 고객 개척</option>
-                        <option value="기존고객">기존 고객 관리</option>
-                        <option value="계약체결">계약 체결</option>
-                        <option value="클레임처리">클레임 처리</option>
-                        <option value="고객불만">고객 불만 처리</option>
-                        <option value="대형계약">대형 계약</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">상황 설명</label>
-                    <textarea id="context" rows="6" required
-                        class="w-full p-2 border rounded"
-                        placeholder="현재 직면한 상황을 자세히 설명해주세요..."></textarea>
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="hideCoachingModal()" 
-                        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">취소</button>
-                    <button type="submit" 
-                        class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-                        코칭 받기
+                <div class="flex items-center space-x-4">
+                    <span id="userName" class="font-semibold"></span>
+                    <button onclick="logout()" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100">
+                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
                     </button>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 코칭 결과 모달 -->
-    <div id="coachingResultModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-4">AI 코칭 결과</h3>
-            <div id="coachingResult" class="space-y-4">
-                <!-- 동적 로딩 -->
             </div>
-            <div class="mt-6">
-                <label class="block text-sm font-medium mb-2">피드백 및 평가</label>
-                <textarea id="feedbackText" rows="3" 
-                    class="w-full p-2 border rounded mb-2"
-                    placeholder="이 코칭이 도움이 되었나요? 피드백을 남겨주세요..."></textarea>
-                <div class="flex items-center justify-between">
+        </nav>
+        
+        <div class="max-w-7xl mx-auto p-6">
+            <!-- 프로필 카드 -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-user-circle mr-2 text-blue-600"></i>내 프로필
+                </h2>
+                <div id="profileInfo" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            </div>
+            
+            <!-- AI 코칭 요청 -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-comments mr-2 text-purple-600"></i>AI 코칭 요청
+                </h2>
+                <form id="coachingForm" class="space-y-4">
                     <div>
-                        <label class="text-sm font-medium mr-2">효과성 평가:</label>
-                        <select id="effectivenessRating" class="p-2 border rounded">
-                            <option value="5">⭐⭐⭐⭐⭐ 매우 도움됨</option>
-                            <option value="4">⭐⭐⭐⭐ 도움됨</option>
-                            <option value="3">⭐⭐⭐ 보통</option>
-                            <option value="2">⭐⭐ 별로</option>
-                            <option value="1">⭐ 도움 안됨</option>
+                        <label class="block text-gray-700 font-semibold mb-2">상황 유형</label>
+                        <select id="situationType" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="신규고객">신규 고객</option>
+                            <option value="기존고객">기존 고객</option>
+                            <option value="대형계약">대형 계약</option>
+                            <option value="클레임처리">클레임 처리</option>
+                            <option value="기타">기타</option>
                         </select>
                     </div>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="shareWithAdmin" class="mr-2">
-                        <span class="text-sm">관리자와 공유</span>
-                    </label>
-                </div>
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">현장 상황 설명</label>
+                        <textarea id="context" rows="4" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                            placeholder="현재 직면한 상황을 자세히 설명해주세요..."></textarea>
+                    </div>
+                    <button type="submit"
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold px-6 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700">
+                        <i class="fas fa-paper-plane mr-2"></i>AI 코칭 받기
+                    </button>
+                </form>
             </div>
-            <div class="flex justify-end space-x-2 mt-4">
-                <button onclick="hideCoachingResultModal()" 
-                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">닫기</button>
-                <button onclick="submitFeedback()" 
-                    class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-                    피드백 제출
-                </button>
+            
+            <!-- 코칭 히스토리 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-history mr-2 text-green-600"></i>코칭 히스토리
+                </h2>
+                <div id="sessionsList" class="space-y-4"></div>
             </div>
         </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script>
-        let currentUser = null;
-        let currentSessionId = null;
-
-        // 인증 체크
-        function checkAuth() {
-            const userStr = localStorage.getItem('user');
-            if (!userStr) {
-                window.location.href = '/';
-                return null;
-            }
-            return JSON.parse(userStr);
-        }
-
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = '/';
-        }
-
-        function showCoachingModal() {
-            document.getElementById('coachingModal').classList.remove('hidden');
-            document.getElementById('coachingModal').classList.add('flex');
-        }
-
-        function hideCoachingModal() {
-            document.getElementById('coachingModal').classList.add('hidden');
-            document.getElementById('coachingModal').classList.remove('flex');
-        }
-
-        function hideCoachingResultModal() {
-            document.getElementById('coachingResultModal').classList.add('hidden');
-            document.getElementById('coachingResultModal').classList.remove('flex');
-        }
-
-        async function loadDashboard() {
-            const response = await axios.get(\`/api/planner/dashboard/\${currentUser.id}\`);
-            const data = response.data;
-
-            document.getElementById('totalSessions').textContent = data.stats.totalCoachingSessions;
-            document.getElementById('completedTraining').textContent = data.stats.completedTraining;
-            
-            // 최근 세션
-            const sessionsHtml = data.recentSessions.map(s => \`
-                <div class="p-4 border rounded">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded mb-2">
-                                \${s.situation_type}
-                            </span>
-                            <p class="text-sm text-gray-600 mb-2">\${s.context.substring(0, 100)}...</p>
-                            <p class="text-xs text-gray-500">\${new Date(s.session_date).toLocaleString('ko-KR')}</p>
-                        </div>
-                        \${s.effectiveness_rating ? \`<span class="text-yellow-500">\${'⭐'.repeat(s.effectiveness_rating)}</span>\` : ''}
-                    </div>
-                </div>
-            \`).join('');
-            document.getElementById('recentSessions').innerHTML = sessionsHtml || '<p class="text-gray-500">아직 코칭 세션이 없습니다</p>';
-
-            // 진행 중인 교육
-            const trainingHtml = data.ongoingTraining.map(t => \`
-                <div class="p-4 border rounded">
-                    <h4 class="font-semibold mb-2">\${t.title}</h4>
-                    <div class="flex items-center mb-2">
-                        <div class="flex-1 bg-gray-200 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width: \${t.progress_percent}%"></div>
-                        </div>
-                        <span class="ml-2 text-sm">\${t.progress_percent}%</span>
-                    </div>
-                    <span class="text-xs text-gray-500">\${t.category} • \${t.duration_minutes}분</span>
-                </div>
-            \`).join('');
-            document.getElementById('ongoingTraining').innerHTML = trainingHtml || '<p class="text-gray-500">진행 중인 교육이 없습니다</p>';
-        }
-
-        async function loadPrograms() {
-            const response = await axios.get('/api/training/programs');
-            const programs = response.data.programs;
-
-            const programsHtml = programs.map(p => \`
-                <div class="p-4 border rounded">
-                    <h4 class="font-semibold mb-2">\${p.title}</h4>
-                    <p class="text-sm text-gray-600 mb-2">\${p.description}</p>
-                    <div class="flex justify-between items-center">
-                        <div class="text-xs text-gray-500">
-                            <span class="mr-2">\${p.category}</span>
-                            <span>\${p.duration_minutes}분</span>
-                        </div>
-                        <button onclick="enrollProgram(\${p.id})" 
-                            class="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600">
-                            수강신청
+        
+        <!-- 코칭 상세 모달 -->
+        <div id="sessionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-2xl font-bold text-gray-800">코칭 상세</h3>
+                        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
                         </button>
                     </div>
+                    <div id="sessionDetail"></div>
                 </div>
-            \`).join('');
-            document.getElementById('allPrograms').innerHTML = programsHtml;
-        }
-
-        async function enrollProgram(programId) {
-            try {
-                await axios.post('/api/training/enroll', {
-                    planner_id: currentUser.id,
-                    program_id: programId
-                });
-                alert('수강 신청이 완료되었습니다!');
-                loadDashboard();
-            } catch (error) {
-                alert(error.response?.data?.error || '수강 신청에 실패했습니다');
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script>
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            if (!user.id || user.role !== 'planner') {
+                window.location.href = '/'
             }
-        }
-
-        document.getElementById('coachingForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
             
-            const context = document.getElementById('context').value;
-            const situationType = document.getElementById('situationType').value;
-
-            try {
-                const response = await axios.post('/api/coaching/new', {
-                    planner_id: currentUser.id,
-                    context,
-                    situation_type: situationType
-                });
-
-                currentSessionId = response.data.sessionId;
-                const coaching = response.data.coaching;
-
-                document.getElementById('coachingResult').innerHTML = \`
-                    <div class="bg-blue-50 p-4 rounded">
-                        <h4 class="font-semibold mb-2"><i class="fas fa-robot mr-2"></i>AI 상황 분석</h4>
-                        <p>\${coaching.ai_analysis}</p>
-                    </div>
-                    <div class="bg-green-50 p-4 rounded">
-                        <h4 class="font-semibold mb-2"><i class="fas fa-lightbulb mr-2"></i>코칭 조언</h4>
-                        <p class="whitespace-pre-line">\${coaching.coaching_advice}</p>
-                    </div>
-                    <div class="bg-purple-50 p-4 rounded">
-                        <h4 class="font-semibold mb-2"><i class="fas fa-tasks mr-2"></i>추천 접근법</h4>
-                        <p class="whitespace-pre-line">\${coaching.recommended_approach}</p>
-                    </div>
-                    <div class="bg-yellow-50 p-4 rounded">
-                        <h4 class="font-semibold mb-2"><i class="fas fa-user-tie mr-2"></i>30년 현장 노하우</h4>
-                        <p class="whitespace-pre-line">\${coaching.tacit_knowledge_applied}</p>
-                    </div>
-                \`;
-
-                hideCoachingModal();
-                document.getElementById('coachingResultModal').classList.remove('hidden');
-                document.getElementById('coachingResultModal').classList.add('flex');
-                
-                // 폼 리셋
-                document.getElementById('coachingForm').reset();
-            } catch (error) {
-                alert('코칭 요청에 실패했습니다');
+            document.getElementById('userName').textContent = user.name
+            
+            async function loadProfile() {
+                try {
+                    const res = await axios.get(\`/api/planner/\${user.id}\`)
+                    const { profile } = res.data
+                    document.getElementById('profileInfo').innerHTML = \`
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">성향</p>
+                            <p class="font-bold text-blue-700">\${profile.personalityType} - \${profile.salesStyle}</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">경력</p>
+                            <p class="font-bold text-purple-700">\${profile.experienceYears}년 (\${profile.specialization})</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">코칭 세션</p>
+                            <p class="font-bold text-green-700">\${profile.totalCoachingSessions}회</p>
+                        </div>
+                    \`
+                } catch (error) {
+                    console.error(error)
+                }
             }
-        });
-
-        async function submitFeedback() {
-            const feedback = document.getElementById('feedbackText').value;
-            const rating = document.getElementById('effectivenessRating').value;
-            const isShared = document.getElementById('shareWithAdmin').checked;
-
-            await axios.post('/api/coaching/feedback', {
-                session_id: currentSessionId,
-                feedback,
-                rating: parseInt(rating),
-                is_shared: isShared
-            });
-
-            alert('피드백이 제출되었습니다!');
-            hideCoachingResultModal();
-            loadDashboard();
-        }
-
-        // 초기화
-        currentUser = checkAuth();
-        if (currentUser) {
-            document.getElementById('userName').textContent = currentUser.name;
-            loadDashboard();
-            loadPrograms();
-        }
-    </script>
-</body>
-</html>
+            
+            async function loadSessions() {
+                try {
+                    const res = await axios.get(\`/api/coaching-sessions/\${user.id}\`)
+                    const sessions = res.data.sessions
+                    const html = sessions.map(s => \`
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer" onclick="viewSession(\${s.id})">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">\${s.situationType}</span>
+                                <span class="text-sm text-gray-500">\${new Date(s.sessionDate).toLocaleDateString('ko-KR')}</span>
+                            </div>
+                            <p class="text-gray-700 font-semibold mb-2">\${s.context.substring(0, 80)}...</p>
+                            \${s.effectivenessRating ? \`
+                                <div class="flex items-center text-yellow-500">
+                                    \${' <i class="fas fa-star"></i>'.repeat(s.effectivenessRating)}
+                                </div>
+                            \` : ''}
+                        </div>
+                    \`).join('')
+                    document.getElementById('sessionsList').innerHTML = html || '<p class="text-gray-500">아직 코칭 세션이 없습니다.</p>'
+                } catch (error) {
+                    console.error(error)
+                }
+            }
+            
+            document.getElementById('coachingForm').addEventListener('submit', async (e) => {
+                e.preventDefault()
+                const context = document.getElementById('context').value
+                const situationType = document.getElementById('situationType').value
+                
+                try {
+                    const res = await axios.post('/api/coaching-sessions', {
+                        plannerId: user.id,
+                        context,
+                        situationType
+                    })
+                    alert('AI 코칭이 완료되었습니다!')
+                    document.getElementById('context').value = ''
+                    loadSessions()
+                    viewSession(res.data.session.id)
+                } catch (error) {
+                    alert('오류가 발생했습니다.')
+                }
+            })
+            
+            function viewSession(id) {
+                axios.get(\`/api/coaching-sessions/\${user.id}\`).then(res => {
+                    const session = res.data.sessions.find(s => s.id === id)
+                    if (!session) return
+                    
+                    document.getElementById('sessionDetail').innerHTML = \`
+                        <div class="space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-bold text-gray-800 mb-2">상황</h4>
+                                <p class="text-gray-700">\${session.context}</p>
+                            </div>
+                            
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-search mr-2"></i>AI 분석</h4>
+                                <p class="text-gray-700">\${session.aiAnalysis}</p>
+                            </div>
+                            
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <h4 class="font-bold text-purple-800 mb-2"><i class="fas fa-lightbulb mr-2"></i>코칭 조언</h4>
+                                <p class="text-gray-700">\${session.coachingAdvice}</p>
+                            </div>
+                            
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h4 class="font-bold text-green-800 mb-2"><i class="fas fa-route mr-2"></i>추천 접근법</h4>
+                                <pre class="text-gray-700 whitespace-pre-wrap font-sans">\${session.recommendedApproach}</pre>
+                            </div>
+                            
+                            <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                                <h4 class="font-bold text-yellow-800 mb-2"><i class="fas fa-medal mr-2"></i>30년 현장 노하우</h4>
+                                <p class="text-gray-700">\${session.tacitKnowledgeApplied}</p>
+                            </div>
+                            
+                            \${!session.effectivenessRating ? \`
+                                <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
+                                    <h4 class="font-bold text-gray-800 mb-2">피드백 남기기</h4>
+                                    <form id="feedbackForm" class="space-y-3">
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1">효과성 평가</label>
+                                            <select id="rating" class="w-full px-3 py-2 border rounded-lg">
+                                                <option value="5">⭐⭐⭐⭐⭐ 매우 도움됨</option>
+                                                <option value="4">⭐⭐⭐⭐ 도움됨</option>
+                                                <option value="3">⭐⭐⭐ 보통</option>
+                                                <option value="2">⭐⭐ 별로</option>
+                                                <option value="1">⭐ 도움 안됨</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1">후기</label>
+                                            <textarea id="feedback" rows="2" class="w-full px-3 py-2 border rounded-lg"></textarea>
+                                        </div>
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                            제출하기
+                                        </button>
+                                    </form>
+                                </div>
+                            \` : \`
+                                <div class="bg-green-100 p-4 rounded-lg">
+                                    <h4 class="font-bold text-green-800 mb-2">내 피드백</h4>
+                                    <div class="flex items-center text-yellow-500 mb-2">
+                                        \${' <i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
+                                    </div>
+                                    <p class="text-gray-700">\${session.plannerFeedback || '없음'}</p>
+                                </div>
+                            \`}
+                        </div>
+                    \`
+                    
+                    if (!session.effectivenessRating) {
+                        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+                            e.preventDefault()
+                            const rating = parseInt(document.getElementById('rating').value)
+                            const feedback = document.getElementById('feedback').value
+                            
+                            try {
+                                await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
+                                    effectivenessRating: rating,
+                                    feedback
+                                })
+                                alert('피드백이 등록되었습니다!')
+                                closeModal()
+                                loadSessions()
+                            } catch (error) {
+                                alert('오류가 발생했습니다.')
+                            }
+                        })
+                    }
+                    
+                    document.getElementById('sessionModal').classList.remove('hidden')
+                })
+            }
+            
+            function closeModal() {
+                document.getElementById('sessionModal').classList.add('hidden')
+            }
+            
+            function logout() {
+                localStorage.removeItem('user')
+                window.location.href = '/'
+            }
+            
+            loadProfile()
+            loadSessions()
+        </script>
+    </body>
+    </html>
   `)
 })
 
 // 관리자 대시보드
 app.get('/admin', (c) => {
   return c.html(`
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 대시보드</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <nav class="bg-indigo-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center">
-                <i class="fas fa-user-shield text-2xl mr-3"></i>
-                <span class="text-xl font-bold">관리자 대시보드</span>
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>관리자 대시보드 - AI 코칭 플랫폼</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-50">
+        <!-- 네비게이션 -->
+        <nav class="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 shadow-lg">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-shield-alt text-2xl"></i>
+                    <h1 class="text-xl font-bold">관리자 대시보드</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userName" class="font-semibold"></span>
+                    <button onclick="logout()" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-gray-100">
+                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
+                    </button>
+                </div>
             </div>
-            <div>
-                <span id="userName" class="mr-4"></span>
-                <button onclick="logout()" class="bg-indigo-700 px-4 py-2 rounded hover:bg-indigo-800">
-                    <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold mb-6">플랫폼 관리</h1>
+        </nav>
         
-        <!-- 전체 통계 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-users text-4xl text-blue-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">총 설계사</p>
-                        <p id="totalPlanners" class="text-2xl font-bold">-</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-comments text-4xl text-green-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">총 코칭 세션</p>
-                        <p id="totalSessions" class="text-2xl font-bold">-</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex items-center">
-                    <i class="fas fa-star text-4xl text-yellow-500 mr-4"></i>
-                    <div>
-                        <p class="text-gray-600">평균 효과성</p>
-                        <p id="avgEffectiveness" class="text-2xl font-bold">-</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 탭 네비게이션 -->
-        <div class="bg-white rounded-lg shadow mb-6">
-            <div class="border-b">
-                <nav class="flex">
-                    <button onclick="showTab('shared')" id="tab-shared"
-                        class="tab-button px-6 py-3 font-semibold border-b-2 border-indigo-600">
-                        <i class="fas fa-share-alt mr-2"></i>공유된 세션
-                    </button>
-                    <button onclick="showTab('insights')" id="tab-insights"
-                        class="tab-button px-6 py-3 font-semibold text-gray-600 hover:text-gray-800">
-                        <i class="fas fa-lightbulb mr-2"></i>인사이트
-                    </button>
-                    <button onclick="showTab('planners')" id="tab-planners"
-                        class="tab-button px-6 py-3 font-semibold text-gray-600 hover:text-gray-800">
-                        <i class="fas fa-users mr-2"></i>설계사 목록
-                    </button>
-                </nav>
-            </div>
-
-            <div id="content-shared" class="p-6">
-                <h2 class="text-xl font-bold mb-4">공유된 코칭 세션</h2>
-                <div id="sharedSessions" class="space-y-4">
-                    <!-- 동적 로딩 -->
-                </div>
-            </div>
-
-            <div id="content-insights" class="p-6 hidden">
-                <h2 class="text-xl font-bold mb-4">관리자 인사이트</h2>
-                <div id="insights" class="space-y-4">
-                    <!-- 동적 로딩 -->
-                </div>
-            </div>
-
-            <div id="content-planners" class="p-6 hidden">
-                <h2 class="text-xl font-bold mb-4">등록된 설계사</h2>
-                <div id="planners" class="overflow-x-auto">
-                    <!-- 동적 로딩 -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script>
-        let currentUser = null;
-
-        function checkAuth() {
-            const userStr = localStorage.getItem('user');
-            if (!userStr) {
-                window.location.href = '/';
-                return null;
-            }
-            const user = JSON.parse(userStr);
-            if (user.role !== 'admin') {
-                window.location.href = '/planner';
-                return null;
-            }
-            return user;
-        }
-
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = '/';
-        }
-
-        function showTab(tabName) {
-            // 모든 탭 버튼 스타일 리셋
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('border-indigo-600', 'text-gray-800');
-                btn.classList.add('text-gray-600');
-            });
-            
-            // 현재 탭 활성화
-            document.getElementById(\`tab-\${tabName}\`).classList.add('border-indigo-600', 'text-gray-800');
-            document.getElementById(\`tab-\${tabName}\`).classList.remove('text-gray-600');
-
-            // 모든 콘텐츠 숨기기
-            document.getElementById('content-shared').classList.add('hidden');
-            document.getElementById('content-insights').classList.add('hidden');
-            document.getElementById('content-planners').classList.add('hidden');
-
-            // 현재 콘텐츠 보이기
-            document.getElementById(\`content-\${tabName}\`).classList.remove('hidden');
-        }
-
-        async function loadDashboard() {
-            const response = await axios.get('/api/admin/dashboard');
-            const data = response.data;
-
-            // 통계
-            document.getElementById('totalPlanners').textContent = data.stats.totalPlanners;
-            document.getElementById('totalSessions').textContent = data.stats.totalCoachingSessions;
-            document.getElementById('avgEffectiveness').textContent = 
-                (data.stats.averageEffectiveness || 0).toFixed(1) + '⭐';
-
-            // 공유된 세션
-            const sessionsHtml = data.sharedSessions.map(s => \`
-                <div class="p-4 border rounded bg-white">
-                    <div class="flex justify-between items-start mb-2">
+        <div class="max-w-7xl mx-auto p-6">
+            <!-- 통계 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between">
                         <div>
-                            <span class="font-semibold">\${s.planner_name}</span>
-                            <span class="ml-2 text-sm text-gray-500">(\${s.email})</span>
+                            <p class="text-gray-600 text-sm">참여 설계사</p>
+                            <p id="totalPlanners" class="text-3xl font-bold text-blue-600">0</p>
                         </div>
-                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                            \${s.situation_type}
-                        </span>
-                    </div>
-                    <p class="text-sm text-gray-600 mb-2">\${s.context.substring(0, 150)}...</p>
-                    <div class="flex justify-between items-center text-xs text-gray-500">
-                        <span>\${new Date(s.session_date).toLocaleString('ko-KR')}</span>
-                        \${s.effectiveness_rating ? \`<span class="text-yellow-500">\${'⭐'.repeat(s.effectiveness_rating)}</span>\` : ''}
+                        <i class="fas fa-users text-blue-600 text-3xl"></i>
                     </div>
                 </div>
-            \`).join('');
-            document.getElementById('sharedSessions').innerHTML = sessionsHtml || 
-                '<p class="text-gray-500">공유된 세션이 없습니다</p>';
-
-            // 인사이트
-            const insightsHtml = data.insights.map(i => \`
-                <div class="p-4 border rounded bg-white">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-semibold">\${i.planner_name}</span>
-                        <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                            \${i.insight_type}
-                        </span>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">총 코칭 세션</p>
+                            <p id="totalSessions" class="text-3xl font-bold text-purple-600">0</p>
+                        </div>
+                        <i class="fas fa-comments text-purple-600 text-3xl"></i>
                     </div>
-                    <p class="text-sm text-gray-700 mb-2">\${i.insight_content}</p>
-                    <span class="text-xs text-gray-500">
-                        \${new Date(i.created_at).toLocaleString('ko-KR')}
-                    </span>
                 </div>
-            \`).join('');
-            document.getElementById('insights').innerHTML = insightsHtml || 
-                '<p class="text-gray-500">인사이트가 없습니다</p>';
-        }
-
-        async function loadPlanners() {
-            const response = await axios.get('/api/admin/planners');
-            const planners = response.data.planners;
-
-            const plannersHtml = \`
-                <table class="min-w-full bg-white">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-4 py-2 text-left">이름</th>
-                            <th class="px-4 py-2 text-left">이메일</th>
-                            <th class="px-4 py-2 text-left">영업 스타일</th>
-                            <th class="px-4 py-2 text-left">경력</th>
-                            <th class="px-4 py-2 text-left">코칭 세션</th>
-                            <th class="px-4 py-2 text-left">상태</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        \${planners.map(p => \`
-                            <tr class="border-b">
-                                <td class="px-4 py-2">\${p.name}</td>
-                                <td class="px-4 py-2">\${p.email}</td>
-                                <td class="px-4 py-2">\${p.sales_style || '-'}</td>
-                                <td class="px-4 py-2">\${p.experience_years || 0}년</td>
-                                <td class="px-4 py-2">\${p.total_coaching_sessions || 0}회</td>
-                                <td class="px-4 py-2">
-                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                                        \${p.status === 'active' ? '활성' : '비활성'}
-                                    </span>
-                                </td>
-                            </tr>
-                        \`).join('')}
-                    </tbody>
-                </table>
-            \`;
-            document.getElementById('planners').innerHTML = plannersHtml;
-        }
-
-        // 초기화
-        currentUser = checkAuth();
-        if (currentUser) {
-            document.getElementById('userName').textContent = currentUser.name;
-            loadDashboard();
-            loadPlanners();
-        }
-    </script>
-</body>
-</html>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">공유된 세션</p>
+                            <p id="sharedSessions" class="text-3xl font-bold text-green-600">0</p>
+                        </div>
+                        <i class="fas fa-share-alt text-green-600 text-3xl"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">평균 만족도</p>
+                            <p id="avgRating" class="text-3xl font-bold text-yellow-600">0</p>
+                        </div>
+                        <i class="fas fa-star text-yellow-600 text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 공유된 코칭 세션 -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-share-alt mr-2 text-green-600"></i>공유된 코칭 세션
+                </h2>
+                <div id="sharedSessionsList" class="space-y-4"></div>
+            </div>
+            
+            <!-- 교육 프로그램 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-graduation-cap mr-2 text-blue-600"></i>교육 프로그램
+                </h2>
+                <div id="programsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script>
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            if (!user.id || user.role !== 'admin') {
+                window.location.href = '/'
+            }
+            
+            document.getElementById('userName').textContent = user.name
+            
+            async function loadDashboard() {
+                try {
+                    const res = await axios.get('/api/admin/dashboard')
+                    const data = res.data
+                    document.getElementById('totalPlanners').textContent = data.totalPlanners
+                    document.getElementById('totalSessions').textContent = data.totalSessions
+                    document.getElementById('sharedSessions').textContent = data.sharedSessions
+                    document.getElementById('avgRating').textContent = data.avgRating
+                } catch (error) {
+                    console.error(error)
+                }
+            }
+            
+            async function loadSharedSessions() {
+                try {
+                    const res = await axios.get('/api/admin/shared-sessions')
+                    const sessions = res.data.sessions
+                    const html = sessions.map(s => \`
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">\${s.situationType}</span>
+                                    <span class="text-sm font-semibold text-gray-700">\${s.plannerName}</span>
+                                </div>
+                                <span class="text-sm text-gray-500">\${new Date(s.sessionDate).toLocaleDateString('ko-KR')}</span>
+                            </div>
+                            <p class="text-gray-700 mb-2">\${s.context.substring(0, 100)}...</p>
+                            \${s.effectivenessRating ? \`
+                                <div class="flex items-center text-yellow-500">
+                                    \${' <i class="fas fa-star"></i>'.repeat(s.effectivenessRating)}
+                                    <span class="ml-2 text-sm text-gray-600">\${s.plannerFeedback ? '"' + s.plannerFeedback.substring(0, 50) + '..."' : ''}</span>
+                                </div>
+                            \` : ''}
+                        </div>
+                    \`).join('')
+                    document.getElementById('sharedSessionsList').innerHTML = html || '<p class="text-gray-500">공유된 세션이 없습니다.</p>'
+                } catch (error) {
+                    console.error(error)
+                }
+            }
+            
+            async function loadPrograms() {
+                try {
+                    const res = await axios.get('/api/training-programs')
+                    const programs = res.data.programs
+                    const html = programs.map(p => \`
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md">
+                            <h3 class="font-bold text-gray-800 mb-2">\${p.title}</h3>
+                            <p class="text-sm text-gray-600 mb-3">\${p.description}</p>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-blue-600"><i class="fas fa-users mr-1"></i>\${p.enrollmentCount}명 수강</span>
+                                <span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>\${p.completionCount}명 완료</span>
+                            </div>
+                        </div>
+                    \`).join('')
+                    document.getElementById('programsList').innerHTML = html
+                } catch (error) {
+                    console.error(error)
+                }
+            }
+            
+            function logout() {
+                localStorage.removeItem('user')
+                window.location.href = '/'
+            }
+            
+            loadDashboard()
+            loadSharedSessions()
+            loadPrograms()
+        </script>
+    </body>
+    </html>
   `)
 })
 
