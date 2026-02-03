@@ -17,7 +17,8 @@
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
   },
   "dependencies": {
-    "hono": "^4.11.6"
+    "hono": "^4.11.6",
+    "openai": "^6.17.0"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.0",
