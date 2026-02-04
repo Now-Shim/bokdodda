@@ -53,6 +53,16 @@ export interface TrainingProgram {
   completionCount: number
 }
 
+export interface KnowledgeBase {
+  id: number
+  title: string
+  category: string
+  content: string
+  priority: boolean
+  uploadedAt: string
+  uploadedBy: number // Director ID
+}
+
 // Mock Database
 export const users: User[] = [
   // Director
@@ -135,4 +145,55 @@ export const trainingPrograms: TrainingProgram[] = [
   { id: 4, title: '보험 상품 지식 심화', description: '생명보험 및 손해보험 상품의 심화 이해', category: '상품지식', difficulty: 'intermediate', durationMinutes: 150, enrollmentCount: 67, completionCount: 45 },
   { id: 5, title: '감성 영업 커뮤니케이션', description: '고객의 감성을 이해하고 공감하는 커뮤니케이션', category: '고객관리', difficulty: 'beginner', durationMinutes: 100, enrollmentCount: 41, completionCount: 29 },
   { id: 6, title: '디지털 영업 도구 활용', description: '디지털 시대의 효율적인 영업 도구 활용법', category: '영업기법', difficulty: 'beginner', durationMinutes: 60, enrollmentCount: 35, completionCount: 28 },
+]
+
+export const knowledgeBase: KnowledgeBase[] = [
+  {
+    id: 1,
+    title: '신규 고객 첫 만남 전략',
+    category: '영업기법',
+    content: `## 신규 고객 첫 만남 전략
+
+### 핵심 원칙
+1. 첫 만남에서는 절대 보험 이야기를 하지 마세요
+2. 고객의 현재 고민을 경청하세요
+3. 3번째 만남 이후 자연스럽게 솔루션 제시
+
+### 30년 노하우
+- 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다.
+- 진정한 관심을 보이고 천천히 접근하세요.
+- "어떤 부분이 가장 걱정되세요?" 같은 열린 질문으로 시작하세요.
+
+### 실전 팁
+- 1차 만남: 관계 구축 및 경청
+- 2차 만남: 고객 니즈 파악
+- 3차 만남: 솔루션으로서 보험 소개`,
+    priority: true,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: 1
+  },
+  {
+    id: 2,
+    title: '거절 대응 전략',
+    category: '고객관리',
+    content: `## 거절 대응 전략
+
+### 거절의 유형
+1. 경제적 이유: "보험료가 부담됩니다"
+2. 필요성 부족: "저는 아직 필요 없어요"
+3. 불신: "보험은 믿을 수 없어요"
+
+### 대응 방법
+- 경제적 이유: 대안 제시 (보장 축소, 납입 유예)
+- 필요성 부족: 사례 중심 설명
+- 불신: 공감하고 투명하게 설명
+
+### 30년 노하우
+- 거절을 막으려고만 하면 고객은 더 멀어집니다.
+- 고객 입장에서 최선의 방법을 함께 찾아주세요.
+- 지금 계약이 안 되어도 신뢰를 쌓으면 나중에 다시 찾아옵니다.`,
+    priority: true,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: 1
+  }
 ]

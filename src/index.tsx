@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { generateAICoaching } from './ai-helper'
-import { users, plannerProfiles, coachingSessions, trainingPrograms } from './data'
-import type { CoachingSession } from './data'
+import { users, plannerProfiles, coachingSessions, trainingPrograms, knowledgeBase } from './data'
+import type { CoachingSession, KnowledgeBase } from './data'
 
 const app = new Hono()
 
@@ -128,28 +128,136 @@ app.post('/api/coaching-sessions/:id/feedback', async (c) => {
   return c.json({ success: true, session })
 })
 
+// 관리자 - 전체 현황
+app.get('/api/manager/overview', (c) => {
+  const totalPlanners = users.filter(u => u.role === 'planner').length
+  const totalSessions = coachingSessions.length
+  const totalNotes = coachingSessions.filter(s => s.managerNote).length
+  
+  // 최근 세션 (최근 5개)
+  const recentSessions = coachingSessions
+    .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+    .slice(0, 5)
+    .map(s => {
+      const planner = users.find(u => u.id === s.plannerId)
+      return { ...s, plannerName: planner?.name }
+    })
+  
+  // 주의가 필요한 설계사 (경력 1년 이하 또는 낮은 평가)
+  const attentionPlanners = users
+    .filter(u => u.role === 'planner')
+    .map(u => {
+      const profile = plannerProfiles.find(p => p.userId === u.id)
+      const sessions = coachingSessions.filter(s => s.plannerId === u.id)
+      const avgRating = sessions
+        .filter(s => s.effectivenessRating)
+        .reduce((sum, s) => sum + (s.effectivenessRating || 0), 0) / 
+        (sessions.filter(s => s.effectivenessRating).length || 1)
+      
+      let reason = ''
+      if (profile && profile.experienceYears <= 1) {
+        reason = '신규 설계사 (경력 1년 이하)'
+      } else if (avgRating < 3) {
+        reason = '코칭 효과성 낮음 (평균 3점 미만)'
+      } else if (sessions.length < 3) {
+        reason = '코칭 참여 부족'
+      }
+      
+      return reason ? { id: u.id, name: u.name, reason } : null
+    })
+    .filter(p => p !== null)
+    .slice(0, 5)
+  
+  return c.json({
+    totalPlanners,
+    totalSessions,
+    totalNotes,
+    recentSessions,
+    attentionPlanners
+  })
+})
+
 // 관리자 - 전체 세션 목록 (내부 노트 포함)
 app.get('/api/manager/sessions', (c) => {
   const sessions = coachingSessions.map(s => {
     const planner = users.find(u => u.id === s.plannerId)
     return { ...s, plannerName: planner?.name }
   })
-  return c.json({ sessions })
+  
+  const planners = users
+    .filter(u => u.role === 'planner')
+    .map(u => ({ id: u.id, name: u.name }))
+  
+  return c.json({ sessions, planners })
+})
+
+// 관리자 - 설계사 목록
+app.get('/api/manager/planners', (c) => {
+  const planners = users
+    .filter(u => u.role === 'planner')
+    .map(u => {
+      const profile = plannerProfiles.find(p => p.userId === u.id)
+      return { 
+        userId: u.id,
+        name: u.name, 
+        email: u.email, 
+        phone: u.phone,
+        ...profile 
+      }
+    })
+  
+  return c.json({ planners })
 })
 
 // 관리자 - 내부 노트 작성
-app.post('/api/manager/sessions/:id/note', async (c) => {
-  const id = parseInt(c.req.param('id'))
-  const { note } = await c.req.json()
+app.post('/api/manager/note', async (c) => {
+  const { sessionId, managerNote } = await c.req.json()
   
-  const session = coachingSessions.find(s => s.id === id)
+  const session = coachingSessions.find(s => s.id === sessionId)
   if (!session) {
     return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
   }
   
-  session.managerNote = note
+  session.managerNote = managerNote
   
   return c.json({ success: true, session })
+})
+
+// Director - 자료 업로드
+app.post('/api/director/knowledge', async (c) => {
+  const { title, category, content, priority } = await c.req.json()
+  
+  const newKnowledge: KnowledgeBase = {
+    id: knowledgeBase.length + 1,
+    title,
+    category,
+    content,
+    priority: priority || false,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: 1 // Director ID
+  }
+  
+  knowledgeBase.push(newKnowledge)
+  
+  return c.json({ success: true, knowledge: newKnowledge })
+})
+
+// Director - 자료 목록 조회
+app.get('/api/director/knowledge', (c) => {
+  return c.json({ knowledge: knowledgeBase })
+})
+
+// Director - 자료 삭제
+app.delete('/api/director/knowledge/:index', (c) => {
+  const index = parseInt(c.req.param('index'))
+  
+  if (index < 0 || index >= knowledgeBase.length) {
+    return c.json({ error: '자료를 찾을 수 없습니다.' }, 404)
+  }
+  
+  knowledgeBase.splice(index, 1)
+  
+  return c.json({ success: true })
 })
 
 // Director - 전체 세션 목록 (모든 필드 포함)
@@ -159,23 +267,27 @@ app.get('/api/director/sessions', (c) => {
     const profile = plannerProfiles.find(p => p.userId === s.plannerId)
     return { ...s, plannerName: planner?.name, plannerProfile: profile }
   })
-  return c.json({ sessions })
+  
+  const planners = users
+    .filter(u => u.role === 'planner')
+    .map(u => ({ id: u.id, name: u.name }))
+  
+  return c.json({ sessions, planners })
 })
 
 // Director - 피드백 작성
-app.post('/api/director/sessions/:id/feedback', async (c) => {
-  const id = parseInt(c.req.param('id'))
-  const { feedback, rating, useForLearning } = await c.req.json()
+app.post('/api/director/feedback', async (c) => {
+  const { sessionId, directorFeedback, directorRating, useForLearning } = await c.req.json()
   
-  const session = coachingSessions.find(s => s.id === id)
+  const session = coachingSessions.find(s => s.id === sessionId)
   if (!session) {
     return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
   }
   
-  session.directorFeedback = feedback
-  session.directorRating = rating
+  session.directorFeedback = directorFeedback
+  session.directorRating = directorRating
   session.isValidated = true
-  session.useForLearning = useForLearning
+  session.useForLearning = useForLearning || false
   
   return c.json({ success: true, session })
 })
@@ -186,17 +298,52 @@ app.get('/api/director/dashboard', (c) => {
   const totalSessions = coachingSessions.length
   const validatedSessions = coachingSessions.filter(s => s.isValidated).length
   const learningData = coachingSessions.filter(s => s.useForLearning).length
-  const avgEffectiveness = coachingSessions
-    .filter(s => s.effectivenessRating !== undefined)
-    .reduce((sum, s) => sum + (s.effectivenessRating || 0), 0) / 
-    coachingSessions.filter(s => s.effectivenessRating !== undefined).length || 0
+  
+  const sessionsWithRating = coachingSessions.filter(s => s.effectivenessRating !== undefined)
+  const avgEffectiveness = sessionsWithRating.length > 0
+    ? (sessionsWithRating.reduce((sum, s) => sum + (s.effectivenessRating || 0), 0) / sessionsWithRating.length).toFixed(1)
+    : '0.0'
+  
+  // 설계사별 세션 수
+  const sessionsByPlanner = users
+    .filter(u => u.role === 'planner')
+    .map(u => ({
+      id: u.id,
+      name: u.name,
+      count: coachingSessions.filter(s => s.plannerId === u.id).length
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+  
+  // 효과성 분포
+  const effectiveness5 = coachingSessions.filter(s => s.effectivenessRating === 5).length
+  const effectiveness4 = coachingSessions.filter(s => s.effectivenessRating === 4).length
+  const effectiveness3 = coachingSessions.filter(s => s.effectivenessRating && s.effectivenessRating <= 3).length
+  
+  // 우수 사례 (재학습 데이터)
+  const excellentCases = coachingSessions
+    .filter(s => s.useForLearning)
+    .sort((a, b) => (b.directorRating || 0) - (a.directorRating || 0))
+    .slice(0, 5)
+    .map(s => {
+      const planner = users.find(u => u.id === s.plannerId)
+      return {
+        ...s,
+        plannerName: planner?.name
+      }
+    })
   
   return c.json({
     totalPlanners,
     totalSessions,
     validatedSessions,
     learningData,
-    avgEffectiveness: avgEffectiveness.toFixed(1),
+    avgEffectiveness,
+    sessionsByPlanner,
+    effectiveness5,
+    effectiveness4,
+    effectiveness3,
+    excellentCases,
     totalPrograms: trainingPrograms.length
   })
 })
@@ -314,17 +461,20 @@ app.get('/', (c) => {
 })
 
 // 설계사 페이지
+// 설계사 페이지
 app.get('/planner', async (c) => {
   const { plannerPageHTML } = await import('./pages-planner')
   return c.html(plannerPageHTML)
 })
 
-// 관리자 페이지 (간단 버전)
-app.get('/manager', (c) => {
-  return c.html(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>관리자 - 북돋다</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gray-50"><div class="p-8"><h1 class="text-3xl font-bold mb-4">관리자 대시보드</h1><p class="text-gray-600">관리자 페이지 구축 중...</p><button onclick="localStorage.removeItem('user'); window.location.href='/'" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded">로그아웃</button></div></body></html>`)
+// 관리자 페이지
+app.get('/manager', async (c) => {
+  const { renderManagerPage } = await import('./pages-manager')
+  return renderManagerPage(c)
 })
 
-// Director 페이지 (간단 버전)
-app.get('/director', (c) => {
-  return c.html(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Director - 북돋다</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gray-50"><div class="p-8"><h1 class="text-3xl font-bold mb-4">Director 대시보드</h1><p class="text-gray-600">Director 페이지 구축 중...</p><button onclick="localStorage.removeItem('user'); window.location.href='/'" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded">로그아웃</button></div></body></html>`)
+// Director 페이지
+app.get('/director', async (c) => {
+  const { renderDirectorPage } = await import('./pages-director')
+  return renderDirectorPage(c)
 })
