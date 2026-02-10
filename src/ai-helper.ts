@@ -1,9 +1,10 @@
 // AI 코칭 헬퍼 함수 (Genspark AI 사용)
 import OpenAI from 'openai'
 
+// Genspark AI 설정
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'dummy-key',
-  baseURL: process.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1',
+  apiKey: process.env.GENSPARK_TOKEN || process.env.OPENAI_API_KEY || '',
+  baseURL: 'https://www.genspark.ai/api/llm_proxy/v1',
 })
 
 export interface CoachingRequest {
