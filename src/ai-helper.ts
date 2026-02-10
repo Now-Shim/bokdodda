@@ -1,12 +1,6 @@
 // AI 코칭 헬퍼 함수 (Genspark AI 사용)
 import OpenAI from 'openai'
 
-// Genspark AI 설정
-const client = new OpenAI({
-  apiKey: process.env.GENSPARK_TOKEN || process.env.OPENAI_API_KEY || '',
-  baseURL: 'https://www.genspark.ai/api/llm_proxy/v1',
-})
-
 export interface CoachingRequest {
   context: string
   situationType: string
@@ -20,6 +14,7 @@ export interface CoachingRequest {
     weaknesses: string
   }
   directorKnowledge?: string // Director가 업로드한 추가 지식
+  env?: any // Cloudflare env binding
 }
 
 export interface CoachingResponse {
@@ -30,7 +25,27 @@ export interface CoachingResponse {
 }
 
 export async function generateAICoaching(request: CoachingRequest): Promise<CoachingResponse> {
-  const { context, situationType, plannerProfile, directorKnowledge } = request
+  const { context, situationType, plannerProfile, directorKnowledge, env } = request
+
+  // API 키 가져오기 (OpenRouter)
+  const apiKey = env?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || 'sk-or-v1-15a...abf'
+  const baseURL = env?.OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || 'https://openrouter.ai/api/v1'
+  
+  console.log('[AI Helper] OpenRouter API 설정:', {
+    hasEnv: !!env,
+    hasApiKey: !!apiKey,
+    keyPrefix: apiKey.substring(0, 15),
+    baseURL
+  })
+
+  const client = new OpenAI({
+    apiKey,
+    baseURL,
+    defaultHeaders: {
+      'HTTP-Referer': 'https://bukdotda.com',
+      'X-Title': '북돋다 AI 코칭 플랫폼'
+    }
+  })
 
   // 30년 노하우 기본 지식베이스
   const tacitKnowledgeBase = `
@@ -96,7 +111,7 @@ ${context}
 
   try {
     const completion = await client.chat.completions.create({
-      model: 'gpt-5',
+      model: 'openai/gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

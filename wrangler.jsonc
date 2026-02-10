@@ -3,5 +3,9 @@
   "name": "webapp",
   "compatibility_date": "2026-01-27",
   "pages_build_output_dir": "./dist",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "GENSPARK_TOKEN": "76ikrNLufxO1nWFA7NWzNggaMKfvP573",
+    "OPENAI_API_KEY": "76ikrNLufxO1nWFA7NWzNggaMKfvP573"
+  }
 }

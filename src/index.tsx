@@ -82,7 +82,8 @@ app.post('/api/coaching-sessions', async (c) => {
         specialization: profile.specialization,
         strengths: profile.strengths,
         weaknesses: profile.weaknesses,
-      }
+      },
+      env: c.env // Cloudflare env binding 전달
     })
     
     const newSession: CoachingSession = {

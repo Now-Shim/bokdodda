@@ -7,9 +7,8 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 3000,
-        GENSPARK_TOKEN: process.env.GENSPARK_TOKEN || '',
-        OPENAI_API_KEY: process.env.GENSPARK_TOKEN || '',
-        OPENAI_BASE_URL: 'https://www.genspark.ai/api/llm_proxy/v1'
+        OPENAI_API_KEY: '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',
+        OPENAI_BASE_URL: 'https://openrouter.ai/api/v1'
       },
       watch: false,
       instances: 1,
