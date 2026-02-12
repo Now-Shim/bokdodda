@@ -241,13 +241,16 @@ app.post('/api/manager/note', async (c) => {
 
 // Director - 자료 업로드
 app.post('/api/director/knowledge', async (c) => {
-  const { title, category, content, priority } = await c.req.json()
+  const { title, category, content, priority, fileType, fileName, fileSize } = await c.req.json()
   
   const newKnowledge: KnowledgeBase = {
     id: knowledgeBase.length + 1,
     title,
     category,
     content,
+    fileType: fileType || 'text',
+    fileName: fileName || undefined,
+    fileSize: fileSize || undefined,
     priority: priority || false,
     uploadedAt: new Date().toISOString(),
     uploadedBy: 1 // Director ID

@@ -70,6 +70,9 @@ export interface KnowledgeBase {
   title: string
   category: string
   content: string
+  fileType?: 'text' | 'file' // 'text': 직접 입력, 'file': 파일 업로드
+  fileName?: string // 업로드된 파일명
+  fileSize?: number // 파일 크기 (bytes)
   priority: boolean
   uploadedAt: string
   uploadedBy: number // Director ID

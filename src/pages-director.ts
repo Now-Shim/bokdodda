@@ -189,8 +189,50 @@ export function renderDirectorPage(c: Context) {
                 </div>
                 
                 <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        내용 입력 방식
+                    </label>
+                    <div class="flex gap-4 mb-4">
+                        <button type="button" id="input-mode-text" onclick="switchInputMode('text')" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-keyboard mr-2"></i>직접 입력
+                        </button>
+                        <button type="button" id="input-mode-file" onclick="switchInputMode('file')" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                            <i class="fas fa-file-upload mr-2"></i>텍스트 파일 업로드
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 직접 입력 모드 -->
+                <div id="input-text-mode" class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">내용 (마크다운 지원)</label>
                     <textarea id="upload-content" rows="12" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="## 신규 고객 첫 만남 전략&#10;&#10;### 핵심 원칙&#10;1. 첫 만남에서는 절대 보험 이야기를 하지 마세요&#10;2. 고객의 현재 고민을 경청하세요&#10;3. 3번째 만남 이후 자연스럽게 솔루션 제시&#10;&#10;### 30년 노하우&#10;- 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다.&#10;- 진정한 관심을 보이고 천천히 접근하세요."></textarea>
+                </div>
+                
+                <!-- 파일 업로드 모드 -->
+                <div id="input-file-mode" class="mb-6 hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">텍스트 파일 선택 (.txt)</label>
+                    <div class="flex items-center gap-4">
+                        <label class="flex-1 cursor-pointer">
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 transition">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-600">클릭하여 텍스트 파일을 선택하세요</p>
+                                <p class="text-sm text-gray-400 mt-1">지원 형식: .txt (UTF-8)</p>
+                            </div>
+                            <input type="file" id="file-input" accept=".txt" class="hidden" onchange="handleFileUpload(event)">
+                        </label>
+                    </div>
+                    <div id="file-preview" class="hidden mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <i class="fas fa-file-alt text-blue-600 mr-2"></i>
+                                <span id="file-name" class="font-semibold text-gray-800"></span>
+                            </div>
+                            <span id="file-size" class="text-sm text-gray-600"></span>
+                        </div>
+                        <div class="mt-2 p-3 bg-white rounded border border-gray-200 max-h-48 overflow-y-auto">
+                            <pre id="file-content-preview" class="text-sm text-gray-700 whitespace-pre-wrap"></pre>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="mb-6">
@@ -630,12 +672,98 @@ export function renderDirectorPage(c: Context) {
             }
         }
         
+        // 입력 모드 전환
+        let currentInputMode = 'text' // 'text' 또는 'file'
+        let uploadedFileContent = ''
+        let uploadedFileName = ''
+        let uploadedFileSize = 0
+        
+        function switchInputMode(mode) {
+            currentInputMode = mode
+            
+            const textBtn = document.getElementById('input-mode-text')
+            const fileBtn = document.getElementById('input-mode-file')
+            const textMode = document.getElementById('input-text-mode')
+            const fileMode = document.getElementById('input-file-mode')
+            
+            if (mode === 'text') {
+                textBtn.classList.add('bg-purple-600', 'text-white')
+                textBtn.classList.remove('bg-gray-200', 'text-gray-700')
+                fileBtn.classList.remove('bg-purple-600', 'text-white')
+                fileBtn.classList.add('bg-gray-200', 'text-gray-700')
+                textMode.classList.remove('hidden')
+                fileMode.classList.add('hidden')
+            } else {
+                fileBtn.classList.add('bg-purple-600', 'text-white')
+                fileBtn.classList.remove('bg-gray-200', 'text-gray-700')
+                textBtn.classList.remove('bg-purple-600', 'text-white')
+                textBtn.classList.add('bg-gray-200', 'text-gray-700')
+                fileMode.classList.remove('hidden')
+                textMode.classList.add('hidden')
+            }
+        }
+        
+        // 파일 업로드 처리
+        function handleFileUpload(event) {
+            const file = event.target.files[0]
+            if (!file) return
+            
+            // 파일 타입 확인
+            if (!file.name.endsWith('.txt')) {
+                alert('텍스트 파일(.txt)만 업로드 가능합니다.')
+                event.target.value = ''
+                return
+            }
+            
+            // 파일 크기 확인 (10MB 제한)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('파일 크기는 10MB를 초과할 수 없습니다.')
+                event.target.value = ''
+                return
+            }
+            
+            uploadedFileName = file.name
+            uploadedFileSize = file.size
+            
+            // 파일 읽기
+            const reader = new FileReader()
+            reader.onload = function(e) {
+                uploadedFileContent = e.target.result
+                
+                // 미리보기 표시
+                document.getElementById('file-name').textContent = file.name
+                document.getElementById('file-size').textContent = formatFileSize(file.size)
+                document.getElementById('file-content-preview').textContent = uploadedFileContent.substring(0, 500) + (uploadedFileContent.length > 500 ? '...' : '')
+                document.getElementById('file-preview').classList.remove('hidden')
+            }
+            reader.readAsText(file, 'UTF-8')
+        }
+        
+        // 파일 크기 포맷팅
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B'
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+        }
+        
         // 자료 업로드
         async function uploadKnowledge() {
             const title = document.getElementById('upload-title').value.trim()
             const category = document.getElementById('upload-category').value
-            const content = document.getElementById('upload-content').value.trim()
             const priority = document.getElementById('upload-priority').checked
+            
+            let content = ''
+            let fileType = currentInputMode
+            let fileName = null
+            let fileSize = null
+            
+            if (currentInputMode === 'text') {
+                content = document.getElementById('upload-content').value.trim()
+            } else {
+                content = uploadedFileContent
+                fileName = uploadedFileName
+                fileSize = uploadedFileSize
+            }
             
             if (!title || !content) {
                 alert('제목과 내용을 입력해주세요.')
@@ -647,7 +775,10 @@ export function renderDirectorPage(c: Context) {
                     title,
                     category,
                     content,
-                    priority
+                    priority,
+                    fileType,
+                    fileName,
+                    fileSize
                 })
                 
                 alert('자료가 성공적으로 업로드되었습니다!')
@@ -665,6 +796,16 @@ export function renderDirectorPage(c: Context) {
             document.getElementById('upload-category').value = '영업기법'
             document.getElementById('upload-content').value = ''
             document.getElementById('upload-priority').checked = false
+            
+            // 파일 업로드 초기화
+            document.getElementById('file-input').value = ''
+            document.getElementById('file-preview').classList.add('hidden')
+            uploadedFileContent = ''
+            uploadedFileName = ''
+            uploadedFileSize = 0
+            
+            // 직접 입력 모드로 전환
+            switchInputMode('text')
         }
         
         // 업로드된 자료 로드
@@ -692,11 +833,14 @@ export function renderDirectorPage(c: Context) {
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <h5 class="font-bold text-gray-800 mb-1">
-                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2"></i>' : ''}\${k.title}
+                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2"></i>' : ''}
+                                \${k.title}
+                                \${k.fileType === 'file' ? '<i class="fas fa-file-alt text-blue-500 ml-2" title="파일 업로드"></i>' : ''}
                             </h5>
                             <p class="text-xs text-gray-500 mb-2">
                                 <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">\${k.category}</span>
                                 <span class="ml-2">\${new Date(k.uploadedAt).toLocaleDateString('ko-KR')}</span>
+                                \${k.fileName ? \`<span class="ml-2 text-gray-400">📄 \${k.fileName} (\${formatFileSize(k.fileSize || 0)})</span>\` : ''}
                             </p>
                             <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
                         </div>
