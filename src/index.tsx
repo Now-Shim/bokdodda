@@ -92,10 +92,25 @@ app.post('/api/coaching-sessions', async (c) => {
       sessionDate: new Date().toISOString(),
       context,
       situationType,
+      
+      // AI 분석 (보험 세일즈 프로세스 & 현 단계 & 컨셉 & 상품)
       aiAnalysis: aiResponse.aiAnalysis,
+      salesProcess: aiResponse.salesProcess,
+      currentStage: aiResponse.currentStage,
+      productSellingPoint: aiResponse.productSellingPoint,
+      
+      // 코칭 조언 (구체적 대화 흐름 & 필요 지식 & 매니저 요청)
       coachingAdvice: aiResponse.coachingAdvice,
+      dialogueScript: aiResponse.dialogueScript,
+      requiredKnowledge: aiResponse.requiredKnowledge,
+      managerRequest: aiResponse.managerRequest,
+      
+      // 추천 접근법 (설계사 성향 기반 참신한 아이디어)
       recommendedApproach: aiResponse.recommendedApproach,
+      
+      // 30년 노하우 (내부 참조용)
       tacitKnowledgeApplied: aiResponse.tacitKnowledge,
+      
       isShared: false,
       isValidated: false,
       useForLearning: false,

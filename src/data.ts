@@ -27,14 +27,26 @@ export interface CoachingSession {
   sessionDate: string
   context: string
   situationType: string
-  aiAnalysis: string
-  coachingAdvice: string
-  recommendedApproach: string
-  tacitKnowledgeApplied: string
+  
+  // AI 코칭 응답 (새 구조)
+  aiAnalysis: string // 보험 세일즈 프로세스 & 현 단계 & 컨셉 & 상품 selling point
+  salesProcess?: string // 보험 세일즈 프로세스
+  currentStage?: string // 현재 단계
+  productSellingPoint?: string // 상품 판매 포인트
+  
+  coachingAdvice: string // 구체적 대화 흐름 & 필요 지식 & 매니저 요청
+  dialogueScript?: string // 구체적 대화 흐름/스크립트
+  requiredKnowledge?: string // 설계사에게 필요한 지식
+  managerRequest?: string // 매니저에게 요청할 사항
+  
+  recommendedApproach: string // 설계사 성향 기반 참신한 아이디어
+  tacitKnowledgeApplied: string // 30년 노하우 (AI 내부 참조용)
+  
   isShared: boolean
   effectivenessRating?: number
   plannerFeedback?: string
-  // 새로운 필드
+  
+  // 관리자/Director 관련
   managerNote?: string // 관리자 내부 노트
   directorFeedback?: string // Director 피드백
   directorRating?: number // Director 평가 (1-5)

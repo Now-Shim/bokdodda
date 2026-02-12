@@ -18,9 +18,22 @@ export interface CoachingRequest {
 }
 
 export interface CoachingResponse {
+  // AI 분석 (보험 세일즈 프로세스 & 현 단계 & 컨셉 & 상품)
   aiAnalysis: string
+  salesProcess?: string
+  currentStage?: string
+  productSellingPoint?: string
+  
+  // 코칭 조언 (구체적 대화 흐름 & 필요 지식 & 매니저 요청)
   coachingAdvice: string
+  dialogueScript?: string
+  requiredKnowledge?: string
+  managerRequest?: string
+  
+  // 추천 접근법 (설계사 성향 기반 참신한 아이디어)
   recommendedApproach: string
+  
+  // 30년 노하우 (AI 내부 참조용)
   tacitKnowledge: string
 }
 
@@ -47,9 +60,9 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
     }
   })
 
-  // 30년 노하우 기본 지식베이스
+  // 30년 노하우 + Director 업로드 자료 (AI 내부 참조용)
   const tacitKnowledgeBase = `
-[최호석 센터장 30년 현장 노하우]
+[최호석 센터장 30년 현장 노하우 - AI 참조 자료]
 
 1. 신뢰 구축의 원칙
 - 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다
@@ -76,11 +89,11 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
 - 클레임: 최고의 관계 강화 기회, 신속하고 친절하게
 - 거절: "지금은 아니다"는 "나중에 가능하다"의 의미
 
-${directorKnowledge ? '\n[Director 추가 지식]\n' + directorKnowledge : ''}
+${directorKnowledge ? '\n[Director 업로드 자료]\n' + directorKnowledge : ''}
   `
 
   const systemPrompt = `당신은 30년 경력의 보험 영업 교육 전문가 '최호석 센터장'입니다. 
-보험 설계사들에게 현장 맥락에 맞는 실전 코칭을 제공합니다.
+설계사에게 구체적이고 실전에 바로 적용 가능한 코칭을 제공합니다.
 
 설계사 프로필:
 - 이름: ${plannerProfile.name}
@@ -89,25 +102,45 @@ ${directorKnowledge ? '\n[Director 추가 지식]\n' + directorKnowledge : ''}
 - 강점: ${plannerProfile.strengths}
 - 약점: ${plannerProfile.weaknesses}
 
-현장 노하우:
+참조 자료 (내부용):
 ${tacitKnowledgeBase}
 
-응답 형식은 반드시 JSON으로 제공하고, 다음 구조를 따르세요:
+응답 형식 (반드시 JSON, 예시 텍스트 그대로 복사하지 말고 실제 분석 내용으로 채워서 응답):
 {
-  "aiAnalysis": "상황 분석 (2-3문장)",
-  "coachingAdvice": "구체적인 조언 (3-4문장)",
-  "recommendedApproach": "단계별 실행 방법 (3-5단계, 줄바꿈으로 구분)",
-  "tacitKnowledge": "[30년 노하우] 로 시작하는 핵심 통찰 (1-2문장)"
+  "aiAnalysis": "실제 보험 세일즈 프로세스 분석을 여기에 작성",
+  "salesProcess": "관계구축 또는 니즈파악 또는 제안 또는 클로징 등 실제 단계명",
+  "currentStage": "현재 상황의 실제 분석 내용",
+  "productSellingPoint": "실제 상품 판매 포인트를 구체적으로",
+  
+  "coachingAdvice": "실제 코칭 조언 요약",
+  "dialogueScript": "실제 대화 스크립트를 대화문 형식으로",
+  "requiredKnowledge": "설계사가 실제로 알아야 할 지식",
+  "managerRequest": "매니저에게 실제로 요청할 사항",
+  
+  "recommendedApproach": "설계사 성향에 맞는 실제 접근 아이디어"
 }
 
-중요: 설계사의 성향과 약점을 고려하여 맞춤형 조언을 제공하세요.`
+중요 지침:
+1. 추상적/이상적 답변 금지 → 구체적 실전 스크립트 제공
+2. 표준화된 답변 금지 → 설계사 성향 맞춤형 조언
+3. 실제 대화 사례를 포함하여 대화 흐름 구성
+4. 설계사의 약점을 보완하는 구체적 방법 제시
+5. 매니저 지원이 필요한 부분을 명확히 지적
+6. ⚠️ 예시 텍스트를 그대로 복사하지 말고, 주어진 상황에 맞는 실제 분석과 조언을 제공하세요
+7. dialogueScript는 반드시 실제 대화문 형식(설계사: "..." / 고객: "...")으로 작성`
 
   const userPrompt = `상황 유형: ${situationType}
 
-현장 상황:
+설계사 질문/상황:
 ${context}
 
-위 상황에 대해 이 설계사에게 가장 적합한 코칭을 제공해주세요.`
+위 상황에 대해:
+1. 보험 세일즈 프로세스 상 어느 단계인지 분석
+2. 구체적이고 실전에 바로 쓸 수 있는 대화 스크립트 제공
+3. ${plannerProfile.name}(${plannerProfile.personalityType})의 성향에 맞는 참신한 아이디어 제시
+4. 매니저에게 요청할 사항 명확히 제시
+
+JSON 형식으로 응답하세요.`
 
   try {
     const completion = await client.chat.completions.create({
@@ -117,27 +150,51 @@ ${context}
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 3000, // 증가: 구체적인 대화 스크립트를 위해
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
     
+    // JSON 마크다운 코드 블록 제거 (```json ... ```)
+    let cleanedResponse = responseText.trim()
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/,  '').replace(/```\s*$/, '')
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/```\s*$/, '')
+    }
+    
     // JSON 파싱 시도
     try {
-      const parsed = JSON.parse(responseText)
+      const parsed = JSON.parse(cleanedResponse)
       return {
         aiAnalysis: parsed.aiAnalysis || '상황을 분석 중입니다.',
+        salesProcess: parsed.salesProcess,
+        currentStage: parsed.currentStage,
+        productSellingPoint: parsed.productSellingPoint,
+        
         coachingAdvice: parsed.coachingAdvice || '조언을 생성 중입니다.',
+        dialogueScript: parsed.dialogueScript,
+        requiredKnowledge: parsed.requiredKnowledge,
+        managerRequest: parsed.managerRequest,
+        
         recommendedApproach: parsed.recommendedApproach || '접근법을 수립 중입니다.',
-        tacitKnowledge: parsed.tacitKnowledge || '[30년 노하우] 경험을 기반으로 조언드립니다.',
+        tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     } catch (parseError) {
-      // JSON 파싱 실패 시 텍스트를 적절히 분할
+      // JSON 파싱 실패 시 폴백
       return {
-        aiAnalysis: '고객의 현재 상황과 심리를 분석한 결과, 신중한 접근이 필요합니다.',
+        aiAnalysis: '보험 세일즈 프로세스 분석 중입니다.',
+        salesProcess: '분석 중',
+        currentStage: '상황 파악 단계',
+        productSellingPoint: responseText.substring(0, 200),
+        
         coachingAdvice: responseText.substring(0, 300),
+        dialogueScript: undefined,
+        requiredKnowledge: undefined,
+        managerRequest: undefined,
+        
         recommendedApproach: '1. 현재 상황 파악\n2. 고객 니즈 이해\n3. 맞춤 솔루션 제시',
-        tacitKnowledge: '[30년 노하우] 고객의 입장에서 생각하면 답이 보입니다.',
+        tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     }
   } catch (error) {
@@ -146,9 +203,17 @@ ${context}
     // 폴백: 기본 응답
     return {
       aiAnalysis: '현재 AI 서비스에 일시적인 문제가 있습니다. 기본 분석을 제공합니다.',
+      salesProcess: undefined,
+      currentStage: undefined,
+      productSellingPoint: undefined,
+      
       coachingAdvice: `${plannerProfile.personalityType} 성향의 ${plannerProfile.name}님께서는 ${plannerProfile.strengths}을 활용하시되, ${plannerProfile.weaknesses} 부분에 주의하시면 좋겠습니다.`,
+      dialogueScript: undefined,
+      requiredKnowledge: undefined,
+      managerRequest: undefined,
+      
       recommendedApproach: '1. 고객과의 신뢰 관계 구축\n2. 니즈 파악 및 경청\n3. 맞춤형 솔루션 제안',
-      tacitKnowledge: '[30년 노하우] 급하지 않게, 진심으로 고객을 대하면 좋은 결과가 따라옵니다.',
+      tacitKnowledge: '[내부 참조용 - 30년 노하우 기반]',
     }
   }
 }
