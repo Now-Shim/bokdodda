@@ -150,7 +150,7 @@ JSON 형식으로 응답하세요.`
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 3000, // 증가: 구체적인 대화 스크립트를 위해
+      max_tokens: 2000, // 감소: 3000 → 2000 (크레딧 부족 해결)
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
