@@ -179,26 +179,63 @@ export const plannerPageHTML = `
                 
                 document.getElementById('sessionDetail').innerHTML = \`
                     <div class="space-y-4">
+                        <!-- 1. 상황 & 질문 -->
                         <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-gray-800 mb-2"><i class="fas fa-comment-dots mr-2"></i>상황</h4>
+                            <h4 class="font-bold text-gray-800 mb-2"><i class="fas fa-comment-dots mr-2"></i>상황 & 질문</h4>
                             <p class="text-gray-700">\${session.context}</p>
                         </div>
                         
+                        <!-- 2. AI 분석 (보험 세일즈 프로세스, 현 단계 & 컨셉, 상품 Selling Point) -->
                         <div class="bg-blue-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-search mr-2"></i>AI 분석</h4>
-                            <p class="text-gray-700">\${session.aiAnalysis}</p>
+                            <h4 class="font-bold text-blue-800 mb-3"><i class="fas fa-search mr-2"></i>AI 분석</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <h5 class="font-semibold text-blue-900 mb-1">📊 보험 세일즈 프로세스</h5>
+                                    <p class="text-gray-700 ml-4">\${session.salesProcess || '분석 중...'}</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-semibold text-blue-900 mb-1">📍 현 단계 & 컨셉</h5>
+                                    <p class="text-gray-700 ml-4">\${session.currentStage || session.aiAnalysis}</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-semibold text-blue-900 mb-1">💎 상품 Selling Point</h5>
+                                    <p class="text-gray-700 ml-4">\${session.productSellingPoint || '고객 맞춤 상품 분석 중...'}</p>
+                                </div>
+                            </div>
                         </div>
                         
+                        <!-- 3. 코칭 조언 (구체적 대화 흐름, 필요 지식, 매니저 요청) -->
                         <div class="bg-purple-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-purple-800 mb-2"><i class="fas fa-lightbulb mr-2"></i>코칭 조언</h4>
-                            <p class="text-gray-700">\${session.coachingAdvice}</p>
+                            <h4 class="font-bold text-purple-800 mb-3"><i class="fas fa-lightbulb mr-2"></i>코칭 조언</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <h5 class="font-semibold text-purple-900 mb-1">💬 구체적 대화 흐름</h5>
+                                    <div class="text-gray-700 ml-4 bg-white p-3 rounded border border-purple-200">
+                                        <pre class="whitespace-pre-wrap font-sans text-sm">\${session.dialogueScript || session.coachingAdvice}</pre>
+                                    </div>
+                                </div>
+                                \${session.requiredKnowledge ? \`
+                                <div>
+                                    <h5 class="font-semibold text-purple-900 mb-1">📚 필요 지식</h5>
+                                    <p class="text-gray-700 ml-4">\${session.requiredKnowledge}</p>
+                                </div>
+                                \` : ''}
+                                \${session.managerRequest ? \`
+                                <div>
+                                    <h5 class="font-semibold text-purple-900 mb-1">👨‍💼 매니저 요청</h5>
+                                    <p class="text-gray-700 ml-4 bg-orange-50 p-2 rounded border border-orange-200">\${session.managerRequest}</p>
+                                </div>
+                                \` : ''}
+                            </div>
                         </div>
                         
+                        <!-- 4. 추천 접근법 (설계사 성향 기반 참신한 아이디어) -->
                         <div class="bg-green-50 p-4 rounded-lg">
                             <h4 class="font-bold text-green-800 mb-2"><i class="fas fa-route mr-2"></i>추천 접근법</h4>
                             <pre class="text-gray-700 whitespace-pre-wrap font-sans">\${session.recommendedApproach}</pre>
                         </div>
                         
+                        <!-- 5. 30년 현장 노하우 (내부 참조) -->
                         <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
                             <h4 class="font-bold text-yellow-800 mb-2"><i class="fas fa-medal mr-2"></i>30년 현장 노하우</h4>
                             <p class="text-gray-700">\${session.tacitKnowledgeApplied}</p>

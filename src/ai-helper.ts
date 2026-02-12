@@ -56,7 +56,7 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
     baseURL,
     defaultHeaders: {
       'HTTP-Referer': 'https://bukdotda.com',
-      'X-Title': '북돋다 AI 코칭 플랫폼'
+      'X-Title': 'Bukdotda AI Coaching Platform'
     }
   })
 
