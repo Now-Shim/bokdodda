@@ -70,6 +70,12 @@ app.post('/api/coaching-sessions', async (c) => {
   }
   
   try {
+    // Director가 업로드한 지식 자료 가져오기
+    const directorKnowledge = knowledgeBase
+      .filter(kb => kb.priority) // 우선순위 자료만
+      .map(kb => `[${kb.category}] ${kb.title}\n${kb.content}`)
+      .join('\n\n---\n\n')
+    
     // AI 코칭 생성
     const aiResponse = await generateAICoaching({
       context,
@@ -83,6 +89,7 @@ app.post('/api/coaching-sessions', async (c) => {
         strengths: profile.strengths,
         weaknesses: profile.weaknesses,
       },
+      directorKnowledge, // 업로드된 자료 전달
       env: c.env // Cloudflare env binding 전달
     })
     
