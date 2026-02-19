@@ -220,12 +220,7 @@ export const plannerPageHTML = `
                                     <p class="text-gray-700 ml-4">\${session.requiredKnowledge}</p>
                                 </div>
                                 \` : ''}
-                                \${session.managerRequest ? \`
-                                <div>
-                                    <h5 class="font-semibold text-purple-900 mb-1">👨‍💼 매니저 요청</h5>
-                                    <p class="text-gray-700 ml-4 bg-orange-50 p-2 rounded border border-orange-200">\${session.managerRequest}</p>
-                                </div>
-                                \` : ''}
+                                <!-- 매니저 요청은 설계사에게 표시하지 않음 (매니저 전용) -->
                             </div>
                         </div>
                         
