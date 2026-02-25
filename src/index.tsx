@@ -70,10 +70,13 @@ app.post('/api/coaching-sessions', async (c) => {
   }
   
   try {
-    // Director가 업로드한 지식 자료 가져오기
-    const directorKnowledge = knowledgeBase
-      .filter(kb => kb.priority) // 우선순위 자료만
-      .map(kb => `[${kb.category}] ${kb.title}\n${kb.content}`)
+    // Director가 업로드한 지식 자료 가져오기 (D1에서)
+    const knowledgeResult = await c.env.DB.prepare(`
+      SELECT * FROM knowledge_base WHERE priority = 1 ORDER BY uploaded_at DESC
+    `).all()
+    
+    const directorKnowledge = knowledgeResult.results
+      .map((kb: any) => `[${kb.category}] ${kb.title}\n${kb.content}`)
       .join('\n\n---\n\n')
     
     // AI 코칭 생성
@@ -249,41 +252,87 @@ app.post('/api/manager/note', async (c) => {
 // Director - 자료 업로드
 app.post('/api/director/knowledge', async (c) => {
   const { title, category, content, priority, fileType, fileName, fileSize } = await c.req.json()
+  const { env } = c
   
-  const newKnowledge: KnowledgeBase = {
-    id: knowledgeBase.length + 1,
-    title,
-    category,
-    content,
-    fileType: fileType || 'text',
-    fileName: fileName || undefined,
-    fileSize: fileSize || undefined,
-    priority: priority || false,
-    uploadedAt: new Date().toISOString(),
-    uploadedBy: 1 // Director ID
+  try {
+    const result = await env.DB.prepare(`
+      INSERT INTO knowledge_base (title, category, content, file_type, file_name, file_size, priority, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      title,
+      category,
+      content,
+      fileType || 'text',
+      fileName || null,
+      fileSize || null,
+      priority ? 1 : 0,
+      1 // Director ID
+    ).run()
+    
+    const newKnowledge = {
+      id: result.meta.last_row_id,
+      title,
+      category,
+      content,
+      fileType: fileType || 'text',
+      fileName,
+      fileSize,
+      priority: priority || false,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: 1
+    }
+    
+    return c.json({ success: true, knowledge: newKnowledge })
+  } catch (error) {
+    console.error('자료 업로드 오류:', error)
+    return c.json({ error: '자료 업로드 중 오류가 발생했습니다.' }, 500)
   }
-  
-  knowledgeBase.push(newKnowledge)
-  
-  return c.json({ success: true, knowledge: newKnowledge })
 })
 
 // Director - 자료 목록 조회
-app.get('/api/director/knowledge', (c) => {
-  return c.json({ knowledge: knowledgeBase })
+app.get('/api/director/knowledge', async (c) => {
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM knowledge_base ORDER BY uploaded_at DESC
+    `).all()
+    
+    const knowledge = result.results.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      content: row.content,
+      fileType: row.file_type,
+      fileName: row.file_name,
+      fileSize: row.file_size,
+      priority: row.priority === 1,
+      uploadedAt: row.uploaded_at,
+      uploadedBy: row.uploaded_by
+    }))
+    
+    return c.json({ knowledge })
+  } catch (error) {
+    console.error('자료 조회 오류:', error)
+    return c.json({ error: '자료 조회 중 오류가 발생했습니다.' }, 500)
+  }
 })
 
 // Director - 자료 삭제
-app.delete('/api/director/knowledge/:index', (c) => {
-  const index = parseInt(c.req.param('index'))
+app.delete('/api/director/knowledge/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { env } = c
   
-  if (index < 0 || index >= knowledgeBase.length) {
-    return c.json({ error: '자료를 찾을 수 없습니다.' }, 404)
+  try {
+    await env.DB.prepare(`
+      DELETE FROM knowledge_base WHERE id = ?
+    `).bind(id).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('자료 삭제 오류:', error)
+    return c.json({ error: '자료 삭제 중 오류가 발생했습니다.' }, 500)
   }
-  
-  knowledgeBase.splice(index, 1)
-  
-  return c.json({ success: true })
 })
 
 // Director - 전체 세션 목록 (모든 필드 포함)
