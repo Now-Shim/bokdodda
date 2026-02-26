@@ -62,7 +62,7 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
 
   // 30년 노하우 + Director 업로드 자료 (AI 내부 참조용)
   const tacitKnowledgeBase = `
-[최호석 센터장 30년 현장 노하우 - AI 참조 자료]
+[변방의 장수 30년 현장 노하우 - AI 참조 자료]
 
 1. 신뢰 구축의 원칙
 - 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다
@@ -92,7 +92,7 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
 ${directorKnowledge ? '\n[Director 업로드 자료]\n' + directorKnowledge : ''}
   `
 
-  const systemPrompt = `당신은 30년 경력의 보험 영업 교육 전문가 '최호석 센터장'입니다. 
+  const systemPrompt = `당신은 30년 경력의 보험 영업 교육 전문가 '변방의 장수'입니다. 
 설계사에게 구체적이고 실전에 바로 적용 가능한 코칭을 제공합니다.
 
 설계사 프로필:

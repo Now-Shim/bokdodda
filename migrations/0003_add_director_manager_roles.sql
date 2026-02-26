@@ -29,5 +29,5 @@ DROP TABLE users_backup;
 
 -- 6. Director 및 Manager 사용자 추가
 INSERT OR IGNORE INTO users (id, email, name, password_hash, role, phone, status) VALUES
-(1, 'director@bukdotda.com', '최호석 센터장', 'director123', 'director', '010-1234-5678', 'active'),
+(1, 'director@bukdotda.com', '변방의 장수', 'director123', 'director', '010-1234-5678', 'active'),
 (2, 'manager@bukdotda.com', '김관리 매니저', 'manager123', 'manager', '010-2345-6789', 'active');

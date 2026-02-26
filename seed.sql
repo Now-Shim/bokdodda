@@ -1,6 +1,6 @@
 -- 기본 사용자 데이터
 INSERT OR IGNORE INTO users (id, email, name, password_hash, role, phone, status) VALUES
-(1, 'director@bukdotda.com', '최호석 센터장', 'director123', 'director', '010-1234-5678', 'active'),
+(1, 'director@bukdotda.com', '변방의 장수', 'director123', 'director', '010-1234-5678', 'active'),
 (2, 'manager@bukdotda.com', '김관리 매니저', 'manager123', 'manager', '010-2345-6789', 'active'),
 (11, 'planner01@bukdotda.com', '이영수', 'demo123', 'planner', '010-3456-7890', 'active'),
 (12, 'planner02@bukdotda.com', '박민정', 'demo123', 'planner', '010-3456-7891', 'active'),
