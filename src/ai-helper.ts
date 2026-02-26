@@ -150,7 +150,7 @@ JSON 형식으로 응답하세요.`
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 1400, // 임시 감소: 2000 → 1500 (크레딧 부족 임시 해결, 26일 이후 복구)
+      max_tokens: 2000, // 임시 감소: 2000 → 1500 (크레딧 부족 임시 해결, 26일 이후 복구)
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
