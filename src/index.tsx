@@ -335,6 +335,32 @@ app.delete('/api/director/knowledge/:id', async (c) => {
   }
 })
 
+// Director - 자료 수정
+app.put('/api/director/knowledge/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { title, category, content, priority } = await c.req.json()
+  const { env } = c
+  
+  try {
+    await env.DB.prepare(`
+      UPDATE knowledge_base 
+      SET title = ?, category = ?, content = ?, priority = ?
+      WHERE id = ?
+    `).bind(
+      title,
+      category,
+      content,
+      priority ? 1 : 0,
+      id
+    ).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('자료 수정 오류:', error)
+    return c.json({ error: '자료 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // Director - 전체 세션 목록 (모든 필드 포함)
 app.get('/api/director/sessions', (c) => {
   const sessions = coachingSessions.map(s => {

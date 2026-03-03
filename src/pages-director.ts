@@ -345,6 +345,107 @@ export function renderDirectorPage(c: Context) {
         </div>
     </div>
 
+    <!-- 자료 보기 모달 -->
+    <div id="viewKnowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold">
+                        <i class="fas fa-file-alt mr-2"></i>자료 상세보기
+                    </h3>
+                    <button onclick="closeViewModal()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6 pb-6 border-b">
+                    <h4 id="view-title" class="text-2xl font-bold text-gray-800 mb-3"></h4>
+                    <div class="flex gap-4 text-sm text-gray-600">
+                        <span><i class="fas fa-tag mr-2"></i><span id="view-category"></span></span>
+                        <span id="view-priority"></span>
+                        <span><i class="fas fa-calendar mr-2"></i><span id="view-uploadedAt"></span></span>
+                        <span><i class="fas fa-file mr-2"></i><span id="view-fileName"></span></span>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">내용</label>
+                    <div id="view-content" class="bg-gray-50 p-4 rounded-lg text-gray-800 whitespace-pre-wrap" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="editKnowledge(parseInt(document.getElementById('view-title').dataset.id))" class="flex-1 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-edit mr-2"></i>수정하기
+                    </button>
+                    <button onclick="closeViewModal()" class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 자료 수정 모달 -->
+    <div id="editKnowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold">
+                        <i class="fas fa-edit mr-2"></i>자료 수정
+                    </h3>
+                    <button onclick="closeEditModal()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <input type="hidden" id="edit-id">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">제목</label>
+                    <input type="text" id="edit-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
+                    <select id="edit-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="영업기법">영업기법</option>
+                        <option value="상품지식">상품지식</option>
+                        <option value="고객관리">고객관리</option>
+                        <option value="클레임처리">클레임처리</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">내용</label>
+                    <textarea id="edit-content" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="자료 내용을 입력하세요..."></textarea>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="edit-priority" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                        <span class="ml-3 text-sm font-semibold text-gray-700">
+                            <i class="fas fa-star text-yellow-500 mr-2"></i>최우선 검토 (AI 코칭 시 우선 반영)
+                        </span>
+                    </label>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="saveKnowledgeEdit()" class="flex-1 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold shadow-lg">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                    <button onclick="closeEditModal()" class="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script>
         // 전역 변수
@@ -828,12 +929,19 @@ export function renderDirectorPage(c: Context) {
                 return
             }
             
-            container.innerHTML = knowledgeBase.map((k, index) => \`
-                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+            // 우선순위별로 정렬 (최우선 검토 먼저)
+            const sortedKnowledge = [...knowledgeBase].sort((a, b) => {
+                if (a.priority && !b.priority) return -1
+                if (!a.priority && b.priority) return 1
+                return new Date(b.uploadedAt) - new Date(a.uploadedAt)
+            })
+            
+            container.innerHTML = sortedKnowledge.map(k => \`
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition cursor-pointer" onclick="viewKnowledge(\${k.id})">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <h5 class="font-bold text-gray-800 mb-1">
-                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2"></i>' : ''}
+                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2" title="최우선 검토"></i>' : ''}
                                 \${k.title}
                                 \${k.fileType === 'file' ? '<i class="fas fa-file-alt text-blue-500 ml-2" title="파일 업로드"></i>' : ''}
                             </h5>
@@ -844,19 +952,107 @@ export function renderDirectorPage(c: Context) {
                             </p>
                             <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
                         </div>
-                        <button onclick="deleteKnowledge(\${index})" class="ml-4 text-red-600 hover:text-red-800 transition">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="event.stopPropagation(); editKnowledge(\${k.id})" class="text-blue-600 hover:text-blue-800 transition" title="수정">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteKnowledge(\${k.id})" class="text-red-600 hover:text-red-800 transition" title="삭제">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             \`).join('')
         }
         
         // 자료 삭제
-        async function deleteKnowledge(index) {
+        async function deleteKnowledge(id) {
             if (!confirm('이 자료를 삭제하시겠습니까?')) return
             
             try {
+                await axios.delete(\`/api/director/knowledge/\${id}\`)
+                alert('자료가 삭제되었습니다.')
+                await loadKnowledge()
+            } catch (error) {
+                console.error('자료 삭제 실패:', error)
+                alert('자료 삭제에 실패했습니다.')
+            }
+        }
+        
+        // 자료 보기
+        function viewKnowledge(id) {
+            const knowledge = knowledgeBase.find(k => k.id === id)
+            if (!knowledge) return
+            
+            const modal = document.getElementById('viewKnowledgeModal')
+            const titleElement = document.getElementById('view-title')
+            titleElement.textContent = knowledge.title
+            titleElement.dataset.id = knowledge.id
+            
+            document.getElementById('view-category').textContent = knowledge.category
+            document.getElementById('view-priority').innerHTML = knowledge.priority 
+                ? '<i class="fas fa-star text-yellow-500"></i> 최우선 검토' 
+                : '<i class="fas fa-star-o text-gray-400"></i> 일반'
+            document.getElementById('view-uploadedAt').textContent = new Date(knowledge.uploadedAt).toLocaleString('ko-KR')
+            document.getElementById('view-fileName').textContent = knowledge.fileName || '직접 작성'
+            document.getElementById('view-content').textContent = knowledge.content
+            
+            modal.classList.remove('hidden')
+        }
+        
+        // 자료 수정 모달 열기
+        function editKnowledge(id) {
+            const knowledge = knowledgeBase.find(k => k.id === id)
+            if (!knowledge) return
+            
+            const modal = document.getElementById('editKnowledgeModal')
+            document.getElementById('edit-id').value = knowledge.id
+            document.getElementById('edit-title').value = knowledge.title
+            document.getElementById('edit-category').value = knowledge.category
+            document.getElementById('edit-content').value = knowledge.content
+            document.getElementById('edit-priority').checked = knowledge.priority
+            
+            modal.classList.remove('hidden')
+        }
+        
+        // 자료 수정 저장
+        async function saveKnowledgeEdit() {
+            const id = document.getElementById('edit-id').value
+            const title = document.getElementById('edit-title').value.trim()
+            const category = document.getElementById('edit-category').value
+            const content = document.getElementById('edit-content').value.trim()
+            const priority = document.getElementById('edit-priority').checked
+            
+            if (!title || !content) {
+                alert('제목과 내용을 입력해주세요.')
+                return
+            }
+            
+            try {
+                await axios.put(\`/api/director/knowledge/\${id}\`, {
+                    title,
+                    category,
+                    content,
+                    priority
+                })
+                
+                alert('자료가 수정되었습니다!')
+                closeEditModal()
+                await loadKnowledge()
+            } catch (error) {
+                console.error('자료 수정 실패:', error)
+                alert('자료 수정에 실패했습니다.')
+            }
+        }
+        
+        // 모달 닫기
+        function closeViewModal() {
+            document.getElementById('viewKnowledgeModal').classList.add('hidden')
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editKnowledgeModal').classList.add('hidden')
+        }
                 await axios.delete(\`/api/director/knowledge/\${index}\`)
                 alert('자료가 삭제되었습니다.')
                 await loadKnowledge()

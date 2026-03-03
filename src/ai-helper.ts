@@ -61,8 +61,21 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
   })
 
   // 30년 노하우 + Director 업로드 자료 (AI 내부 참조용)
+  // 최우선 검토 자료를 먼저 배치
+  let directorKnowledgeSection = ''
+  if (directorKnowledge) {
+    directorKnowledgeSection = `
+
+[Director 업로드 자료 - 최우선 검토]
+${directorKnowledge}
+
+※ 위 자료는 센터장이 직접 업로드한 핵심 노하우입니다.
+※ AI 코칭 생성 시 위 자료를 최우선으로 참조하여 구체적이고 실전적인 조언을 제공하세요.
+`
+  }
+  
   const tacitKnowledgeBase = `
-[변방의 장수 30년 현장 노하우 - AI 참조 자료]
+[변방의 장수 30년 현장 노하우 - AI 기본 참조 자료]
 
 1. 신뢰 구축의 원칙
 - 급하게 계약하려는 마음이 고객에게 전달되면 신뢰가 무너집니다
@@ -88,8 +101,7 @@ export async function generateAICoaching(request: CoachingRequest): Promise<Coac
 - 기존 고객: 정기 접촉이 가장 중요, 생애주기별 관리
 - 클레임: 최고의 관계 강화 기회, 신속하고 친절하게
 - 거절: "지금은 아니다"는 "나중에 가능하다"의 의미
-
-${directorKnowledge ? '\n[Director 업로드 자료]\n' + directorKnowledge : ''}
+${directorKnowledgeSection}
   `
 
   const systemPrompt = `당신은 30년 경력의 보험 영업 교육 전문가 '변방의 장수'입니다. 
@@ -102,8 +114,17 @@ ${directorKnowledge ? '\n[Director 업로드 자료]\n' + directorKnowledge : ''
 - 강점: ${plannerProfile.strengths}
 - 약점: ${plannerProfile.weaknesses}
 
+참조 자료 우선순위:
+1️⃣ **최우선**: Director가 업로드한 "최우선 검토" 자료 (있는 경우)
+2️⃣ 기본 참조: 30년 현장 노하우
+
 참조 자료 (내부용):
 ${tacitKnowledgeBase}
+
+⚠️ 코칭 생성 시 반드시 다음 순서로 참조하세요:
+1. Director 업로드 자료(최우선 검토)가 있으면 이를 **최우선**으로 반영
+2. 해당 자료의 구체적인 사례, 수치, 스크립트를 **그대로 인용**하여 활용
+3. 기본 30년 노하우는 보조적으로 참조
 
 응답 형식 (반드시 JSON, 예시 텍스트 그대로 복사하지 말고 실제 분석 내용으로 채워서 응답):
 {
@@ -127,7 +148,8 @@ ${tacitKnowledgeBase}
 4. 설계사의 약점을 보완하는 구체적 방법 제시
 5. 매니저 지원이 필요한 부분을 명확히 지적
 6. ⚠️ 예시 텍스트를 그대로 복사하지 말고, 주어진 상황에 맞는 실제 분석과 조언을 제공하세요
-7. dialogueScript는 반드시 실제 대화문 형식(설계사: "..." / 고객: "...")으로 작성`
+7. dialogueScript는 반드시 실제 대화문 형식(설계사: "..." / 고객: "...")으로 작성
+8. 🌟 Director 업로드 자료의 구체적 수치, 사례, 스크립트를 **반드시 인용**하여 사용`
 
   const userPrompt = `상황 유형: ${situationType}
 
