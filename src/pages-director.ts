@@ -842,10 +842,44 @@ export function renderDirectorPage(c: Context) {
             uploadedFileName = file.name
             uploadedFileSize = file.size
             
-            // 파일 읽기
+            // 파일 읽기 (인코딩 자동 감지)
             const reader = new FileReader()
             reader.onload = function(e) {
-                uploadedFileContent = e.target.result
+                let content = e.target.result
+                
+                // UTF-8로 읽어서 깨진 문자가 있는지 확인
+                if (content.includes('�') || /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(content)) {
+                    // EUC-KR로 다시 시도
+                    const readerEucKr = new FileReader()
+                    readerEucKr.onload = function(e2) {
+                        const bytes = new Uint8Array(e2.target.result)
+                        try {
+                            // EUC-KR 디코딩 시도
+                            const decoder = new TextDecoder('euc-kr')
+                            uploadedFileContent = decoder.decode(bytes)
+                            
+                            // 여전히 깨진 문자가 있으면 CP949 시도
+                            if (uploadedFileContent.includes('�')) {
+                                const decoderCp949 = new TextDecoder('cp949')
+                                uploadedFileContent = decoderCp949.decode(bytes)
+                            }
+                            
+                            // 미리보기 업데이트
+                            document.getElementById('file-preview').textContent = 
+                                uploadedFileContent.substring(0, 200) + (uploadedFileContent.length > 200 ? '...' : '')
+                        } catch (err) {
+                            // 디코딩 실패 시 원본 사용
+                            console.warn('인코딩 변환 실패, 원본 사용:', err)
+                            uploadedFileContent = content
+                            document.getElementById('file-preview').textContent = 
+                                uploadedFileContent.substring(0, 200) + (uploadedFileContent.length > 200 ? '...' : '')
+                        }
+                    }
+                    readerEucKr.readAsArrayBuffer(file)
+                    return
+                }
+                
+                uploadedFileContent = content
                 
                 // 미리보기 표시
                 document.getElementById('file-name').textContent = file.name
