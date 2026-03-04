@@ -11,6 +11,13 @@ export function renderDirectorPage(c: Context) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // PDF.js worker 설정
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
 
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
@@ -198,7 +205,7 @@ export function renderDirectorPage(c: Context) {
                             <i class="fas fa-keyboard mr-2"></i>직접 입력
                         </button>
                         <button type="button" id="input-mode-file" onclick="switchInputMode('file')" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                            <i class="fas fa-file-upload mr-2"></i>텍스트 파일 업로드
+                            <i class="fas fa-file-upload mr-2"></i>파일 업로드 (.txt, .pdf)
                         </button>
                     </div>
                 </div>
@@ -216,10 +223,10 @@ export function renderDirectorPage(c: Context) {
                         <label class="flex-1 cursor-pointer">
                             <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 transition">
                                 <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
-                                <p class="text-gray-600">클릭하여 텍스트 파일을 선택하세요</p>
-                                <p class="text-sm text-gray-400 mt-1">지원 형식: .txt (UTF-8)</p>
+                                <p class="text-gray-600">클릭하여 파일을 선택하세요</p>
+                                <p class="text-sm text-gray-400 mt-1">지원 형식: .txt (UTF-8), .pdf (최대 20MB)</p>
                             </div>
-                            <input type="file" id="file-input" accept=".txt" class="hidden" onchange="handleFileUpload(event)">
+                            <input type="file" id="file-input" accept=".txt,.pdf" class="hidden" onchange="handleFileUpload(event)">
                         </label>
                     </div>
                     <div id="file-preview" class="hidden mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -826,16 +833,19 @@ export function renderDirectorPage(c: Context) {
             const file = event.target.files[0]
             if (!file) return
             
-            // 파일 타입 확인
-            if (!file.name.endsWith('.txt')) {
-                alert('텍스트 파일(.txt)만 업로드 가능합니다.')
+            // 파일 타입 확인 (.txt, .pdf 허용)
+            const allowedExtensions = ['.txt', '.pdf']
+            const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+            
+            if (!allowedExtensions.includes(fileExtension)) {
+                alert('텍스트 파일(.txt) 또는 PDF 파일(.pdf)만 업로드 가능합니다.')
                 event.target.value = ''
                 return
             }
             
-            // 파일 크기 확인 (10MB 제한)
-            if (file.size > 10 * 1024 * 1024) {
-                alert('파일 크기는 10MB를 초과할 수 없습니다.')
+            // 파일 크기 확인 (20MB 제한 - PDF용)
+            if (file.size > 20 * 1024 * 1024) {
+                alert('파일 크기는 20MB를 초과할 수 없습니다.')
                 event.target.value = ''
                 return
             }
@@ -843,18 +853,77 @@ export function renderDirectorPage(c: Context) {
             uploadedFileName = file.name
             uploadedFileSize = file.size
             
+            // PDF 파일인 경우 텍스트 추출
+            if (fileExtension === '.pdf') {
+                extractTextFromPDF(file)
+            } else {
+                // 텍스트 파일인 경우 기존 방식
+                readTextFile(file)
+            }
+        }
+        
+        // 텍스트 파일 읽기
+        function readTextFile(file) {
             // 파일 읽기 - 단순 UTF-8 방식
             const reader = new FileReader()
             reader.onload = function(e) {
                 uploadedFileContent = e.target.result
                 
                 // 미리보기 표시
-                document.getElementById('file-name').textContent = file.name
+                document.getElementById('file-name').textContent = file.name + ' (텍스트)'
                 document.getElementById('file-size').textContent = formatFileSize(file.size)
                 document.getElementById('file-content-preview').textContent = uploadedFileContent.substring(0, 500) + (uploadedFileContent.length > 500 ? '...' : '')
                 document.getElementById('file-preview').classList.remove('hidden')
             }
             reader.readAsText(file, 'UTF-8')
+        }
+        
+        // PDF 파일에서 텍스트 추출
+        async function extractTextFromPDF(file) {
+            try {
+                // PDF.js 라이브러리 확인
+                if (typeof pdfjsLib === 'undefined') {
+                    alert('PDF 처리 라이브러리를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+                    return
+                }
+                
+                // 파일을 ArrayBuffer로 읽기
+                const arrayBuffer = await file.arrayBuffer()
+                
+                // PDF 문서 로드
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+                const pdf = await loadingTask.promise
+                
+                console.log('PDF 로드 성공. 총 페이지 수:', pdf.numPages)
+                
+                let fullText = ''
+                
+                // 모든 페이지에서 텍스트 추출
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum)
+                    const textContent = await page.getTextContent()
+                    
+                    // 텍스트 아이템들을 문자열로 변환
+                    const pageText = textContent.items
+                        .map(item => item.str)
+                        .join(' ')
+                    
+                    fullText += pageText + '\\n\\n'
+                }
+                
+                uploadedFileContent = fullText.trim()
+                
+                // 미리보기 표시
+                document.getElementById('file-name').textContent = file.name + ' (PDF, ' + pdf.numPages + '페이지)'
+                document.getElementById('file-size').textContent = formatFileSize(file.size)
+                document.getElementById('file-content-preview').textContent = uploadedFileContent.substring(0, 500) + (uploadedFileContent.length > 500 ? '...' : '')
+                document.getElementById('file-preview').classList.remove('hidden')
+                
+                console.log('PDF 텍스트 추출 완료. 총 문자 수:', uploadedFileContent.length)
+            } catch (error) {
+                console.error('PDF 텍스트 추출 실패:', error)
+                alert('PDF 파일 처리 중 오류가 발생했습니다: ' + error.message)
+            }
         }
         
         // 파일 크기 포맷팅
