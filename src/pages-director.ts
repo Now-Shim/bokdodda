@@ -264,7 +264,7 @@ export function renderDirectorPage(c: Context) {
     </div>
 
     <!-- 피드백 모달 -->
-    <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
         <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
                 <div class="flex justify-between items-center">
@@ -346,7 +346,7 @@ export function renderDirectorPage(c: Context) {
     </div>
 
     <!-- 자료 보기 모달 -->
-    <div id="viewKnowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="viewKnowledgeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
                 <div class="flex justify-between items-center">
@@ -388,7 +388,7 @@ export function renderDirectorPage(c: Context) {
     </div>
 
     <!-- 자료 수정 모달 -->
-    <div id="editKnowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="editKnowledgeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
                 <div class="flex justify-between items-center">
@@ -503,12 +503,22 @@ export function renderDirectorPage(c: Context) {
             }
         }
         
+        // 차트 인스턴스 저장용 전역 변수
+        let chartInstances = { sessions: null, effectiveness: null }
+        
         // 차트 그리기
         function drawCharts(stats) {
+            // 기존 차트 인스턴스 파괴
+            if (chartInstances.sessions) {
+                chartInstances.sessions.destroy()
+            }
+            if (chartInstances.effectiveness) {
+                chartInstances.effectiveness.destroy()
+            }
             // 설계사별 세션 수 차트
             if (stats.sessionsByPlanner && stats.sessionsByPlanner.length > 0) {
                 const ctx1 = document.getElementById('chartSessions').getContext('2d')
-                new Chart(ctx1, {
+                chartInstances.sessions = new Chart(ctx1, {
                     type: 'bar',
                     data: {
                         labels: stats.sessionsByPlanner.map(s => s.name),
@@ -534,7 +544,7 @@ export function renderDirectorPage(c: Context) {
             
             // 효과성 분포 차트
             const ctx2 = document.getElementById('chartEffectiveness').getContext('2d')
-            new Chart(ctx2, {
+            chartInstances.effectiveness = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
                     labels: ['5점 (우수)', '4점 (좋음)', '3점 이하'],
@@ -726,12 +736,12 @@ export function renderDirectorPage(c: Context) {
             // 평가 버튼 하이라이트
             setRating(session.directorRating || 5)
             
-            document.getElementById('feedbackModal').classList.remove('hidden')
+            document.getElementById('feedbackModal').style.display = 'flex'
         }
         
         // 피드백 모달 닫기
         function closeFeedbackModal() {
-            document.getElementById('feedbackModal').classList.add('hidden')
+            document.getElementById('feedbackModal').style.display = 'none'
         }
         
         // 평가 점수 설정
@@ -1005,6 +1015,7 @@ export function renderDirectorPage(c: Context) {
             document.getElementById('view-content').textContent = knowledge.content
             
             modal.classList.remove('hidden')
+            modal.classList.add('flex')
         }
         
         // 자료 수정 모달 열기
@@ -1019,7 +1030,11 @@ export function renderDirectorPage(c: Context) {
             document.getElementById('edit-content').value = knowledge.content
             document.getElementById('edit-priority').checked = knowledge.priority
             
+            // 먼저 상세보기 모달 닫기
+            closeViewModal()
+            
             modal.classList.remove('hidden')
+            modal.classList.add('flex')
         }
         
         // 자료 수정 저장
@@ -1054,11 +1069,15 @@ export function renderDirectorPage(c: Context) {
         
         // 모달 닫기
         function closeViewModal() {
-            document.getElementById('viewKnowledgeModal').classList.add('hidden')
+            const modal = document.getElementById('viewKnowledgeModal')
+            modal.classList.remove('flex')
+            modal.classList.add('hidden')
         }
         
         function closeEditModal() {
-            document.getElementById('editKnowledgeModal').classList.add('hidden')
+            const modal = document.getElementById('editKnowledgeModal')
+            modal.classList.remove('flex')
+            modal.classList.add('hidden')
         }
                 await axios.delete(\`/api/director/knowledge/\${index}\`)
                 alert('자료가 삭제되었습니다.')
