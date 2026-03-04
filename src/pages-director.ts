@@ -456,24 +456,29 @@ export function renderDirectorPage(c: Context) {
         
         // 초기화
         async function init() {
-            const userData = localStorage.getItem('user')
-            if (!userData) {
-                window.location.href = '/'
-                return
+            try {
+                const userData = localStorage.getItem('user')
+                if (!userData) {
+                    window.location.href = '/'
+                    return
+                }
+                
+                currentUser = JSON.parse(userData)
+                if (currentUser.role !== 'director') {
+                    alert('Director 권한이 필요합니다.')
+                    window.location.href = '/'
+                    return
+                }
+                
+                document.getElementById('directorName').textContent = currentUser.name
+                
+                await loadDashboard()
+                await loadSessions()
+                await loadKnowledge()
+            } catch (error) {
+                console.error('초기화 오류:', error)
+                alert('페이지 초기화 중 오류가 발생했습니다: ' + error.message)
             }
-            
-            currentUser = JSON.parse(userData)
-            if (currentUser.role !== 'director') {
-                alert('Director 권한이 필요합니다.')
-                window.location.href = '/'
-                return
-            }
-            
-            document.getElementById('directorName').textContent = currentUser.name
-            
-            await loadDashboard()
-            await loadSessions()
-            await loadKnowledge()
         }
         
         // 대시보드 데이터 로드
@@ -494,6 +499,7 @@ export function renderDirectorPage(c: Context) {
                 displayExcellentCases(stats.excellentCases || [])
             } catch (error) {
                 console.error('대시보드 로드 실패:', error)
+                alert('대시보드 데이터를 불러오는데 실패했습니다: ' + error.message)
             }
         }
         
@@ -917,6 +923,7 @@ export function renderDirectorPage(c: Context) {
                 displayKnowledge()
             } catch (error) {
                 console.error('자료 로드 실패:', error)
+                alert('자료 목록을 불러오는데 실패했습니다: ' + error.message)
             }
         }
         
