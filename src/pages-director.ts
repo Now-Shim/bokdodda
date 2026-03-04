@@ -1079,6 +1079,14 @@ export function renderDirectorPage(c: Context) {
             modal.classList.remove('flex')
             modal.classList.add('hidden')
         }
+        
+        // 자료 삭제
+        async function deleteKnowledge(index) {
+            if (!confirm('정말로 이 자료를 삭제하시겠습니까?')) {
+                return
+            }
+            
+            try {
                 await axios.delete(\`/api/director/knowledge/\${index}\`)
                 alert('자료가 삭제되었습니다.')
                 await loadKnowledge()
