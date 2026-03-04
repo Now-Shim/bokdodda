@@ -11,6 +11,7 @@ export function renderDirectorPage(c: Context) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
     <div class="container mx-auto px-4 py-6">
@@ -842,39 +843,47 @@ export function renderDirectorPage(c: Context) {
             uploadedFileName = file.name
             uploadedFileSize = file.size
             
-            // 파일 읽기 (ArrayBuffer로 읽어서 인코딩 자동 감지)
+            // 파일 읽기 (encoding-japanese 라이브러리 사용)
             const reader = new FileReader()
             reader.onload = function(e) {
                 const bytes = new Uint8Array(e.target.result)
                 let content = ''
                 let encodingUsed = 'UTF-8'
                 
-                try {
-                    // 먼저 UTF-8로 디코딩 시도
-                    const decoderUtf8 = new TextDecoder('utf-8', { fatal: true })
-                    content = decoderUtf8.decode(bytes)
-                    encodingUsed = 'UTF-8'
-                } catch (err) {
-                    // UTF-8 디코딩 실패 시 EUC-KR 시도
+                // encoding-japanese 라이브러리로 인코딩 자동 감지
+                if (typeof Encoding !== 'undefined') {
                     try {
-                        const decoderEucKr = new TextDecoder('euc-kr')
-                        content = decoderEucKr.decode(bytes)
-                        encodingUsed = 'EUC-KR'
-                        console.log('EUC-KR 인코딩으로 파일을 읽었습니다.')
-                    } catch (err2) {
-                        // EUC-KR도 실패 시 Windows-949 (CP949) 시도
-                        try {
-                            const decoderCp949 = new TextDecoder('windows-949')
-                            content = decoderCp949.decode(bytes)
-                            encodingUsed = 'CP949'
-                            console.log('CP949 인코딩으로 파일을 읽었습니다.')
-                        } catch (err3) {
-                            // 모두 실패 시 UTF-8 강제 (비정상 동작)
-                            const decoderUtf8Fallback = new TextDecoder('utf-8')
-                            content = decoderUtf8Fallback.decode(bytes)
-                            encodingUsed = 'UTF-8 (fallback)'
-                            console.warn('모든 인코딩 시도 실패, UTF-8 강제 사용')
-                        }
+                        // 인코딩 자동 감지
+                        const detectedEncoding = Encoding.detect(bytes)
+                        console.log('감지된 인코딩:', detectedEncoding)
+                        
+                        // 유니코드 배열로 변환
+                        const unicodeArray = Encoding.convert(bytes, {
+                            to: 'UNICODE',
+                            from: detectedEncoding || 'AUTO'
+                        })
+                        
+                        // 문자열로 변환
+                        content = Encoding.codeToString(unicodeArray)
+                        encodingUsed = detectedEncoding || 'AUTO'
+                        console.log('인코딩 변환 성공:', encodingUsed)
+                    } catch (err) {
+                        console.error('encoding-japanese 변환 실패:', err)
+                        // 폴백: 기본 UTF-8 디코더 사용
+                        const decoder = new TextDecoder('utf-8')
+                        content = decoder.decode(bytes)
+                        encodingUsed = 'UTF-8 (fallback)'
+                    }
+                } else {
+                    // encoding-japanese 미로드 시 기본 방식
+                    try {
+                        const decoderUtf8 = new TextDecoder('utf-8', { fatal: true })
+                        content = decoderUtf8.decode(bytes)
+                        encodingUsed = 'UTF-8'
+                    } catch (err) {
+                        const decoder = new TextDecoder('utf-8')
+                        content = decoder.decode(bytes)
+                        encodingUsed = 'UTF-8 (fallback)'
                     }
                 }
                 
