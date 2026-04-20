@@ -173,6 +173,9 @@ app.post('/api/coaching-sessions', async (c) => {
       // 30년 노하우 (내부 참조용)
       tacitKnowledgeApplied: aiResponse.tacitKnowledge,
       
+      // 참조 자료 (근거)
+      references: aiResponse.references || [],
+      
       isShared: false,
       isValidated: false,
       useForLearning: false,
@@ -535,6 +538,10 @@ app.get('/api/director/links', async (c) => {
       description: row.description,
       category: row.category,
       isActive: row.is_active === 1,
+      authRequired: row.auth_required === 1,
+      username: row.username,
+      password: row.password,
+      loginUrl: row.login_url,
       lastCrawledAt: row.last_crawled_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -549,19 +556,23 @@ app.get('/api/director/links', async (c) => {
 
 // Director - 외부 링크 추가
 app.post('/api/director/links', async (c) => {
-  const { name, url, description, category, isActive } = await c.req.json()
+  const { name, url, description, category, isActive, authRequired, username, password, loginUrl } = await c.req.json()
   const { env } = c
   
   try {
     const result = await env.DB.prepare(`
-      INSERT INTO external_links (name, url, description, category, is_active)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO external_links (name, url, description, category, is_active, auth_required, username, password, login_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       name,
       url,
       description || null,
       category || null,
-      isActive ? 1 : 0
+      isActive ? 1 : 0,
+      authRequired ? 1 : 0,
+      username || null,
+      password || null,
+      loginUrl || null
     ).run()
     
     const newLink = {
@@ -585,13 +596,15 @@ app.post('/api/director/links', async (c) => {
 // Director - 외부 링크 수정
 app.put('/api/director/links/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
-  const { name, url, description, category, isActive } = await c.req.json()
+  const { name, url, description, category, isActive, authRequired, username, password, loginUrl } = await c.req.json()
   const { env } = c
   
   try {
     await env.DB.prepare(`
       UPDATE external_links 
-      SET name = ?, url = ?, description = ?, category = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, url = ?, description = ?, category = ?, is_active = ?, 
+          auth_required = ?, username = ?, password = ?, login_url = ?,
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
       name,
@@ -599,6 +612,10 @@ app.put('/api/director/links/:id', async (c) => {
       description || null,
       category || null,
       isActive ? 1 : 0,
+      authRequired ? 1 : 0,
+      username || null,
+      password || null,
+      loginUrl || null,
       id
     ).run()
     

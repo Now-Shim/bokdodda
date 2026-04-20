@@ -531,6 +531,51 @@ export function renderDirectorPage(c: Context) {
                     </select>
                 </div>
                 
+                <div class="mb-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="link-authRequired" class="w-5 h-5 text-orange-600 rounded focus:ring-orange-500" onchange="toggleAuthFields()">
+                        <span class="ml-3 text-sm font-semibold text-gray-700">
+                            <i class="fas fa-lock text-orange-500 mr-2"></i>로그인 필요 (아이디/비밀번호 필요한 사이트)
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- 인증 정보 입력 필드 (로그인 필요 시만 표시) -->
+                <div id="authFieldsContainer" class="hidden mb-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <p class="text-sm text-orange-700 mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        로그인이 필요한 사이트의 인증 정보를 입력하세요. (예: 메가넷, 업계 전용 사이트)
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user text-orange-600 mr-2"></i>아이디
+                        </label>
+                        <input type="text" id="link-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="로그인 아이디">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-key text-orange-600 mr-2"></i>비밀번호
+                        </label>
+                        <input type="password" id="link-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="로그인 비밀번호">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-sign-in-alt text-orange-600 mr-2"></i>로그인 페이지 URL (선택사항)
+                        </label>
+                        <input type="url" id="link-loginUrl" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="메인 URL과 다를 경우 입력">
+                        <p class="text-xs text-gray-500 mt-1">입력하지 않으면 메인 URL을 로그인 페이지로 사용합니다.</p>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded p-3 text-xs text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        <strong>보안 주의:</strong> 로그인 정보는 암호화되지 않은 상태로 저장됩니다. 
+                        중요한 개인 계정보다는 업무용 공용 계정 사용을 권장합니다.
+                    </div>
+                </div>
+                
                 <div class="mb-6">
                     <label class="flex items-center cursor-pointer">
                         <input type="checkbox" id="link-isActive" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500" checked>
@@ -1292,6 +1337,7 @@ export function renderDirectorPage(c: Context) {
                                         : '<span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">비활성</span>'
                                     }
                                     \${link.category ? \`<span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">\${link.category}</span>\` : ''}
+                                    \${link.authRequired ? '<span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"><i class="fas fa-lock mr-1"></i>로그인 필요</span>' : ''}
                                 </div>
                                 <a href="\${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline mb-2 block">
                                     <i class="fas fa-external-link-alt mr-1"></i>\${link.url}
@@ -1320,6 +1366,22 @@ export function renderDirectorPage(c: Context) {
         }
         
         // 링크 추가 모달 열기
+        // 인증 필드 표시/숨김 토글
+        function toggleAuthFields() {
+            const authRequired = document.getElementById('link-authRequired').checked
+            const container = document.getElementById('authFieldsContainer')
+            
+            if (authRequired) {
+                container.classList.remove('hidden')
+            } else {
+                container.classList.add('hidden')
+                // 체크 해제 시 인증 정보 초기화
+                document.getElementById('link-username').value = ''
+                document.getElementById('link-password').value = ''
+                document.getElementById('link-loginUrl').value = ''
+            }
+        }
+        
         function openAddLinkModal() {
             document.getElementById('linkModalTitle').innerHTML = '<i class="fas fa-link mr-2"></i>외부 링크 추가'
             document.getElementById('link-id').value = ''
@@ -1328,6 +1390,11 @@ export function renderDirectorPage(c: Context) {
             document.getElementById('link-description').value = ''
             document.getElementById('link-category').value = '규제'
             document.getElementById('link-isActive').checked = true
+            document.getElementById('link-authRequired').checked = false
+            document.getElementById('link-username').value = ''
+            document.getElementById('link-password').value = ''
+            document.getElementById('link-loginUrl').value = ''
+            document.getElementById('authFieldsContainer').classList.add('hidden')
             document.getElementById('linkModal').classList.remove('hidden')
             document.getElementById('linkModal').classList.add('flex')
         }
@@ -1344,6 +1411,20 @@ export function renderDirectorPage(c: Context) {
             document.getElementById('link-description').value = link.description || ''
             document.getElementById('link-category').value = link.category || '규제'
             document.getElementById('link-isActive').checked = link.isActive
+            
+            // 인증 정보 처리
+            const authRequired = link.authRequired || false
+            document.getElementById('link-authRequired').checked = authRequired
+            document.getElementById('link-username').value = link.username || ''
+            document.getElementById('link-password').value = link.password || ''
+            document.getElementById('link-loginUrl').value = link.loginUrl || ''
+            
+            if (authRequired) {
+                document.getElementById('authFieldsContainer').classList.remove('hidden')
+            } else {
+                document.getElementById('authFieldsContainer').classList.add('hidden')
+            }
+            
             document.getElementById('linkModal').classList.remove('hidden')
             document.getElementById('linkModal').classList.add('flex')
         }
@@ -1363,23 +1444,35 @@ export function renderDirectorPage(c: Context) {
             const category = document.getElementById('link-category').value
             const isActive = document.getElementById('link-isActive').checked
             
+            // 인증 정보
+            const authRequired = document.getElementById('link-authRequired').checked
+            const username = document.getElementById('link-username').value.trim()
+            const password = document.getElementById('link-password').value.trim()
+            const loginUrl = document.getElementById('link-loginUrl').value.trim()
+            
             if (!name || !url) {
                 alert('링크 이름과 URL은 필수입니다.')
                 return
             }
             
+            if (authRequired && (!username || !password)) {
+                alert('로그인 필요 시 아이디와 비밀번호는 필수입니다.')
+                return
+            }
+            
             try {
+                const payload = {
+                    name, url, description, category, isActive,
+                    authRequired, username, password, loginUrl
+                }
+                
                 if (id) {
                     // 수정
-                    await axios.put(\`/api/director/links/\${id}\`, {
-                        name, url, description, category, isActive
-                    })
+                    await axios.put(\`/api/director/links/\${id}\`, payload)
                     alert('링크가 수정되었습니다.')
                 } else {
                     // 추가
-                    await axios.post('/api/director/links', {
-                        name, url, description, category, isActive
-                    })
+                    await axios.post('/api/director/links', payload)
                     alert('링크가 추가되었습니다.')
                 }
                 

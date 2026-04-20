@@ -17,6 +17,12 @@ export interface CoachingRequest {
   env?: any // Cloudflare env binding
 }
 
+export interface CoachingReference {
+  source: string      // 출처명 (예: 금융감독원 보험약관, 의료가이드라인)
+  content: string     // 인용한 내용 발췌
+  url?: string        // 참조 URL (있는 경우)
+}
+
 export interface CoachingResponse {
   // AI 분석 (보험 세일즈 프로세스 & 현 단계 & 컨셉 & 상품)
   aiAnalysis: string
@@ -32,6 +38,9 @@ export interface CoachingResponse {
   
   // 추천 접근법 (설계사 성향 기반 참신한 아이디어)
   recommendedApproach: string
+  
+  // 참조 자료 (근거 제시)
+  references?: CoachingReference[]
   
   // 30년 노하우 (AI 내부 참조용)
   tacitKnowledge: string
@@ -138,18 +147,51 @@ ${tacitKnowledgeBase}
   "requiredKnowledge": "설계사가 실제로 알아야 할 지식",
   "managerRequest": "매니저에게 실제로 요청할 사항",
   
-  "recommendedApproach": "설계사 성향에 맞는 실제 접근 아이디어"
+  "recommendedApproach": "설계사 성향에 맞는 실제 접근 아이디어",
+  
+  "references": [
+    {
+      "source": "출처명 (예: 금융감독원 보험약관, 의료가이드라인, Director 업로드 자료명)",
+      "content": "실제 인용한 내용 발췌 (약관 조항, 통계 수치, 가이드라인 등)",
+      "url": "참조한 URL (있는 경우)"
+    }
+  ]
 }
 
+🔥 **근거 제시 필수 지침 (CRITICAL):**
+1. **보험약관 관련**: 반드시 구체적 약관 조항명과 내용을 인용
+   - 예: "실손의료비보험 표준약관 제5조 2항에 따르면..."
+   - 예: "항암 방사선 치료 특약 약관 [담보별 보상내용] 참조..."
+
+2. **의료 정보 관련**: 반드시 의료 가이드라인이나 진료지침 인용
+   - 예: "대한의학회 치료 가이드라인에 따르면, 프로빅토 치료는..."
+   - 예: "건강보험심사평가원 고시 제2024-XX호..."
+
+3. **통계/규제 정보**: 반드시 출처와 수치를 명확히 제시
+   - 예: "금융감독원 2024년 2분기 보험통계 기준..."
+   - 예: "보험업법 시행령 제XX조에 의거..."
+
+4. **references 배열 작성 규칙**:
+   - 코칭 조언에서 인용한 모든 자료를 references에 포함
+   - source: 출처 기관명 또는 자료명
+   - content: 실제 인용한 내용 (100-300자 발췌)
+   - url: 참조 URL (외부 링크 자료인 경우)
+
+5. **근거 없는 조언 금지**:
+   - "보험약관을 확인하세요" ❌ → "XX보험 표준약관 제5조에 따르면..." ✅
+   - "의료 가이드라인 참조" ❌ → "대한의학회 XX 가이드라인 2024판 p.45 기준..." ✅
+   - 추상적 조언 대신 구체적 근거 제시
+
 중요 지침:
-1. 추상적/이상적 답변 금지 → 구체적 실전 스크립트 제공
+1. 추상적/이상적 답변 금지 → 구체적 실전 스크립트 + 근거 제공
 2. 표준화된 답변 금지 → 설계사 성향 맞춤형 조언
 3. 실제 대화 사례를 포함하여 대화 흐름 구성
 4. 설계사의 약점을 보완하는 구체적 방법 제시
 5. 매니저 지원이 필요한 부분을 명확히 지적
 6. ⚠️ 예시 텍스트를 그대로 복사하지 말고, 주어진 상황에 맞는 실제 분석과 조언을 제공하세요
 7. dialogueScript는 반드시 실제 대화문 형식(설계사: "..." / 고객: "...")으로 작성
-8. 🌟 Director 업로드 자료의 구체적 수치, 사례, 스크립트를 **반드시 인용**하여 사용`
+8. 🌟 Director 업로드 자료의 구체적 수치, 사례, 스크립트를 **반드시 인용**하여 사용
+9. 🔥 **모든 조언에는 반드시 구체적 근거를 references에 포함** (약관 조항, 의료 가이드라인, 통계 등)`
 
   const userPrompt = `상황 유형: ${situationType}
 
@@ -161,6 +203,12 @@ ${context}
 2. 구체적이고 실전에 바로 쓸 수 있는 대화 스크립트 제공
 3. ${plannerProfile.name}(${plannerProfile.personalityType})의 성향에 맞는 참신한 아이디어 제시
 4. 매니저에게 요청할 사항 명확히 제시
+5. 🔥 **반드시 구체적 근거를 제시** (보험약관 조항, 의료 가이드라인, 규제, 통계 등을 references에 포함)
+
+⚠️ 중요: 보험약관이나 의료정보 관련 조언을 할 때는 반드시:
+- 구체적인 약관 조항명 또는 의료 가이드라인명을 명시
+- 해당 내용의 핵심을 인용
+- references 배열에 출처와 내용을 포함
 
 JSON 형식으로 응답하세요.`
 
@@ -200,6 +248,7 @@ JSON 형식으로 응답하세요.`
         managerRequest: parsed.managerRequest,
         
         recommendedApproach: parsed.recommendedApproach || '접근법을 수립 중입니다.',
+        references: parsed.references || [],  // 참조 자료 추가
         tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     } catch (parseError) {
@@ -216,6 +265,7 @@ JSON 형식으로 응답하세요.`
         managerRequest: undefined,
         
         recommendedApproach: '1. 현재 상황 파악\n2. 고객 니즈 이해\n3. 맞춤 솔루션 제시',
+        references: [],
         tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     }
@@ -235,6 +285,7 @@ JSON 형식으로 응답하세요.`
       managerRequest: undefined,
       
       recommendedApproach: '1. 고객과의 신뢰 관계 구축\n2. 니즈 파악 및 경청\n3. 맞춤형 솔루션 제안',
+      references: [],
       tacitKnowledge: '[내부 참조용 - 30년 노하우 기반]',
     }
   }

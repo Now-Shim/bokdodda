@@ -41,6 +41,7 @@ export interface CoachingSession {
   
   recommendedApproach: string // 설계사 성향 기반 참신한 아이디어
   tacitKnowledgeApplied: string // 30년 노하우 (AI 내부 참조용)
+  references?: Array<{ source: string, content: string, url?: string }> // 참조 자료 (근거)
   
   isShared: boolean
   effectivenessRating?: number
