@@ -57,6 +57,9 @@ export function renderDirectorPage(c: Context) {
                 <button onclick="switchTab('upload')" id="tab-upload" class="flex-1 py-4 px-6 font-semibold text-gray-500 hover:text-purple-600 transition">
                     <i class="fas fa-upload mr-2"></i>자료 업로드
                 </button>
+                <button onclick="switchTab('links')" id="tab-links" class="flex-1 py-4 px-6 font-semibold text-gray-500 hover:text-purple-600 transition">
+                    <i class="fas fa-link mr-2"></i>외부 링크 관리
+                </button>
             </div>
         </div>
 
@@ -269,6 +272,28 @@ export function renderDirectorPage(c: Context) {
                 </div>
             </div>
         </div>
+
+        <!-- 외부 링크 관리 탭 -->
+        <div id="content-links" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-link mr-3 text-purple-600"></i>외부 링크 관리
+                        </h3>
+                        <p class="text-gray-600 mt-2">코칭 시 참고할 외부 웹사이트를 등록하고 관리합니다.</p>
+                    </div>
+                    <button onclick="openAddLinkModal()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
+                        <i class="fas fa-plus mr-2"></i>링크 추가
+                    </button>
+                </div>
+
+                <!-- 링크 목록 -->
+                <div id="linksList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 피드백 모달 -->
@@ -454,6 +479,79 @@ export function renderDirectorPage(c: Context) {
         </div>
     </div>
 
+    <!-- 링크 추가/수정 모달 -->
+    <div id="linkModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 id="linkModalTitle" class="text-2xl font-bold">
+                        <i class="fas fa-link mr-2"></i>외부 링크 추가
+                    </h3>
+                    <button onclick="closeLinkModal()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <input type="hidden" id="link-id" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-heading text-purple-600 mr-2"></i>링크 이름
+                    </label>
+                    <input type="text" id="link-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="예: 금융감독원 보험공시">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-globe text-purple-600 mr-2"></i>URL
+                    </label>
+                    <input type="url" id="link-url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="https://example.com">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-align-left text-purple-600 mr-2"></i>설명
+                    </label>
+                    <textarea id="link-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="이 링크에 대한 간단한 설명을 입력하세요..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-tag text-purple-600 mr-2"></i>카테고리
+                    </label>
+                    <select id="link-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="규제">규제</option>
+                        <option value="통계">통계</option>
+                        <option value="상품정보">상품정보</option>
+                        <option value="뉴스">뉴스</option>
+                        <option value="업계동향">업계동향</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="link-isActive" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500" checked>
+                        <span class="ml-3 text-sm font-semibold text-gray-700">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>활성화 (코칭 시 참조)
+                        </span>
+                    </label>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="saveLink()" class="flex-1 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                    <button onclick="closeLinkModal()" class="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script>
         // 전역 변수
@@ -461,6 +559,7 @@ export function renderDirectorPage(c: Context) {
         let allSessions = []
         let allPlanners = []
         let knowledgeBase = []
+        let externalLinks = []
         
         // 초기화
         async function init() {
@@ -483,6 +582,7 @@ export function renderDirectorPage(c: Context) {
                 await loadDashboard()
                 await loadSessions()
                 await loadKnowledge()
+                await loadLinks()
             } catch (error) {
                 console.error('초기화 오류:', error)
                 alert('페이지 초기화 중 오류가 발생했습니다: ' + error.message)
@@ -1167,6 +1267,157 @@ export function renderDirectorPage(c: Context) {
         }
         
         // 탭 전환
+        // ============== 외부 링크 관리 ==============
+        
+        // 링크 목록 로드
+        async function loadLinks() {
+            try {
+                const res = await axios.get('/api/director/links')
+                externalLinks = res.data.links || []
+                
+                const linksList = document.getElementById('linksList')
+                if (externalLinks.length === 0) {
+                    linksList.innerHTML = '<p class="text-gray-500 text-center py-8">등록된 링크가 없습니다.</p>'
+                    return
+                }
+                
+                linksList.innerHTML = externalLinks.map(link => \`
+                    <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h4 class="text-xl font-bold text-gray-800">\${link.name}</h4>
+                                    \${link.isActive 
+                                        ? '<span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full">활성</span>' 
+                                        : '<span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">비활성</span>'
+                                    }
+                                    \${link.category ? \`<span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">\${link.category}</span>\` : ''}
+                                </div>
+                                <a href="\${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline mb-2 block">
+                                    <i class="fas fa-external-link-alt mr-1"></i>\${link.url}
+                                </a>
+                                \${link.description ? \`<p class="text-sm text-gray-600">\${link.description}</p>\` : ''}
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                <button onclick="toggleLinkStatus(\${link.id})" class="px-4 py-2 \${link.isActive ? 'bg-gray-200 hover:bg-gray-300' : 'bg-green-100 hover:bg-green-200'} rounded-lg transition text-sm">
+                                    <i class="fas fa-\${link.isActive ? 'pause' : 'play'} mr-1"></i>\${link.isActive ? '비활성화' : '활성화'}
+                                </button>
+                                <button onclick="editLink(\${link.id})" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition text-sm">
+                                    <i class="fas fa-edit mr-1"></i>수정
+                                </button>
+                                <button onclick="deleteLink(\${link.id})" class="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition text-sm">
+                                    <i class="fas fa-trash mr-1"></i>삭제
+                                </button>
+                            </div>
+                        </div>
+                        \${link.lastCrawledAt ? \`<p class="text-xs text-gray-500"><i class="fas fa-clock mr-1"></i>마지막 수집: \${new Date(link.lastCrawledAt).toLocaleString('ko-KR')}</p>\` : ''}
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('링크 로드 실패:', error)
+                document.getElementById('linksList').innerHTML = '<p class="text-red-500 text-center py-8">링크를 불러오는데 실패했습니다.</p>'
+            }
+        }
+        
+        // 링크 추가 모달 열기
+        function openAddLinkModal() {
+            document.getElementById('linkModalTitle').innerHTML = '<i class="fas fa-link mr-2"></i>외부 링크 추가'
+            document.getElementById('link-id').value = ''
+            document.getElementById('link-name').value = ''
+            document.getElementById('link-url').value = ''
+            document.getElementById('link-description').value = ''
+            document.getElementById('link-category').value = '규제'
+            document.getElementById('link-isActive').checked = true
+            document.getElementById('linkModal').classList.remove('hidden')
+            document.getElementById('linkModal').classList.add('flex')
+        }
+        
+        // 링크 수정 모달 열기
+        function editLink(id) {
+            const link = externalLinks.find(l => l.id === id)
+            if (!link) return
+            
+            document.getElementById('linkModalTitle').innerHTML = '<i class="fas fa-edit mr-2"></i>외부 링크 수정'
+            document.getElementById('link-id').value = link.id
+            document.getElementById('link-name').value = link.name
+            document.getElementById('link-url').value = link.url
+            document.getElementById('link-description').value = link.description || ''
+            document.getElementById('link-category').value = link.category || '규제'
+            document.getElementById('link-isActive').checked = link.isActive
+            document.getElementById('linkModal').classList.remove('hidden')
+            document.getElementById('linkModal').classList.add('flex')
+        }
+        
+        // 링크 모달 닫기
+        function closeLinkModal() {
+            document.getElementById('linkModal').classList.add('hidden')
+            document.getElementById('linkModal').classList.remove('flex')
+        }
+        
+        // 링크 저장
+        async function saveLink() {
+            const id = document.getElementById('link-id').value
+            const name = document.getElementById('link-name').value.trim()
+            const url = document.getElementById('link-url').value.trim()
+            const description = document.getElementById('link-description').value.trim()
+            const category = document.getElementById('link-category').value
+            const isActive = document.getElementById('link-isActive').checked
+            
+            if (!name || !url) {
+                alert('링크 이름과 URL은 필수입니다.')
+                return
+            }
+            
+            try {
+                if (id) {
+                    // 수정
+                    await axios.put(\`/api/director/links/\${id}\`, {
+                        name, url, description, category, isActive
+                    })
+                    alert('링크가 수정되었습니다.')
+                } else {
+                    // 추가
+                    await axios.post('/api/director/links', {
+                        name, url, description, category, isActive
+                    })
+                    alert('링크가 추가되었습니다.')
+                }
+                
+                closeLinkModal()
+                await loadLinks()
+            } catch (error) {
+                console.error('링크 저장 실패:', error)
+                alert('링크 저장에 실패했습니다.')
+            }
+        }
+        
+        // 링크 활성화/비활성화 토글
+        async function toggleLinkStatus(id) {
+            try {
+                const res = await axios.patch(\`/api/director/links/\${id}/toggle\`)
+                const newStatus = res.data.isActive ? '활성화' : '비활성화'
+                alert(\`링크가 \${newStatus}되었습니다.\`)
+                await loadLinks()
+            } catch (error) {
+                console.error('링크 상태 변경 실패:', error)
+                alert('링크 상태 변경에 실패했습니다.')
+            }
+        }
+        
+        // 링크 삭제
+        async function deleteLink(id) {
+            if (!confirm('정말로 이 링크를 삭제하시겠습니까?')) return
+            
+            try {
+                await axios.delete(\`/api/director/links/\${id}\`)
+                alert('링크가 삭제되었습니다.')
+                await loadLinks()
+            } catch (error) {
+                console.error('링크 삭제 실패:', error)
+                alert('링크 삭제에 실패했습니다.')
+            }
+        }
+        
         function switchTab(tab) {
             // 모든 탭 버튼 초기화
             document.querySelectorAll('[id^="tab-"]').forEach(btn => {

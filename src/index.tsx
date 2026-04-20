@@ -79,6 +79,58 @@ app.post('/api/coaching-sessions', async (c) => {
       .map((kb: any) => `[${kb.category}] ${kb.title}\n${kb.content}`)
       .join('\n\n---\n\n')
     
+    // 외부 링크에서 관련 데이터 수집 (활성화된 링크만)
+    const linksResult = await c.env.DB.prepare(`
+      SELECT * FROM external_links WHERE is_active = 1 ORDER BY created_at DESC LIMIT 5
+    `).all()
+    
+    let externalLinkData = ''
+    if (linksResult.results.length > 0) {
+      // 키워드 추출 (간단한 키워드 매칭)
+      const keywords = context.toLowerCase().match(/[가-힣]{2,}/g) || []
+      
+      for (const link of linksResult.results.slice(0, 3)) { // 최대 3개 링크만 크롤링
+        try {
+          // GenSpark Token 사용하여 크롤링
+          const crawlRes = await fetch(`https://api.genspark.ai/v1/crawler`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${c.env.GENSPARK_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url: (link as any).url })
+          })
+          
+          if (crawlRes.ok) {
+            const data = await crawlRes.json()
+            const content = data.content || data.markdown || ''
+            
+            // 간단한 키워드 필터링 (관련성 있는 내용만 포함)
+            let relevantContent = content
+            if (keywords.length > 0) {
+              const lines = content.split('\n')
+              const relevantLines = lines.filter((line: string) => 
+                keywords.some(kw => line.toLowerCase().includes(kw))
+              )
+              
+              if (relevantLines.length > 0) {
+                relevantContent = relevantLines.slice(0, 20).join('\n') // 최대 20줄
+              } else {
+                relevantContent = content.substring(0, 1000) // 관련 내용 없으면 처음 1000자
+              }
+            }
+            
+            externalLinkData += `\n\n[외부 참조: ${(link as any).name}]\nURL: ${(link as any).url}\n${relevantContent.substring(0, 1500)}\n---`
+          }
+        } catch (err) {
+          console.error(`링크 크롤링 실패 (${(link as any).url}):`, err)
+        }
+      }
+    }
+    
+    // 통합된 지식 자료
+    const combinedKnowledge = directorKnowledge + externalLinkData
+    
     // AI 코칭 생성
     const aiResponse = await generateAICoaching({
       context,
@@ -92,7 +144,7 @@ app.post('/api/coaching-sessions', async (c) => {
         strengths: profile.strengths,
         weaknesses: profile.weaknesses,
       },
-      directorKnowledge, // 업로드된 자료 전달
+      directorKnowledge: combinedKnowledge, // 업로드된 자료 + 외부 링크 데이터
       env: c.env // Cloudflare env binding 전달
     })
     
@@ -463,6 +515,176 @@ app.get('/api/planners', (c) => {
       return { ...u, profile }
     })
   return c.json({ planners })
+})
+
+// ============== 외부 링크 관리 API ==============
+
+// Director - 외부 링크 목록 조회
+app.get('/api/director/links', async (c) => {
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM external_links ORDER BY created_at DESC
+    `).all()
+    
+    const links = result.results.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      url: row.url,
+      description: row.description,
+      category: row.category,
+      isActive: row.is_active === 1,
+      lastCrawledAt: row.last_crawled_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+    
+    return c.json({ links })
+  } catch (error) {
+    console.error('링크 조회 오류:', error)
+    return c.json({ error: '링크 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Director - 외부 링크 추가
+app.post('/api/director/links', async (c) => {
+  const { name, url, description, category, isActive } = await c.req.json()
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      INSERT INTO external_links (name, url, description, category, is_active)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      name,
+      url,
+      description || null,
+      category || null,
+      isActive ? 1 : 0
+    ).run()
+    
+    const newLink = {
+      id: result.meta.last_row_id,
+      name,
+      url,
+      description,
+      category,
+      isActive: isActive || false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    return c.json({ success: true, link: newLink })
+  } catch (error) {
+    console.error('링크 추가 오류:', error)
+    return c.json({ error: '링크 추가 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Director - 외부 링크 수정
+app.put('/api/director/links/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { name, url, description, category, isActive } = await c.req.json()
+  const { env } = c
+  
+  try {
+    await env.DB.prepare(`
+      UPDATE external_links 
+      SET name = ?, url = ?, description = ?, category = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      name,
+      url,
+      description || null,
+      category || null,
+      isActive ? 1 : 0,
+      id
+    ).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('링크 수정 오류:', error)
+    return c.json({ error: '링크 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Director - 외부 링크 삭제
+app.delete('/api/director/links/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { env } = c
+  
+  try {
+    await env.DB.prepare(`
+      DELETE FROM external_links WHERE id = ?
+    `).bind(id).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('링크 삭제 오류:', error)
+    return c.json({ error: '링크 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Director - 외부 링크 활성화/비활성화 토글
+app.patch('/api/director/links/:id/toggle', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { env } = c
+  
+  try {
+    // 현재 상태 조회
+    const linkResult = await env.DB.prepare(`
+      SELECT is_active FROM external_links WHERE id = ?
+    `).bind(id).first()
+    
+    if (!linkResult) {
+      return c.json({ error: '링크를 찾을 수 없습니다.' }, 404)
+    }
+    
+    const newStatus = linkResult.is_active === 1 ? 0 : 1
+    
+    await env.DB.prepare(`
+      UPDATE external_links SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).bind(newStatus, id).run()
+    
+    return c.json({ success: true, isActive: newStatus === 1 })
+  } catch (error) {
+    console.error('링크 상태 변경 오류:', error)
+    return c.json({ error: '링크 상태 변경 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 웹 크롤링 (링크 내용 수집)
+app.post('/api/crawl', async (c) => {
+  const { url } = await c.req.json()
+  const { env } = c
+  
+  try {
+    // GenSpark의 crawler tool을 사용
+    const response = await fetch(`${env.GENSPARK_API_BASE_URL || 'https://api.genspark.ai'}/v1/crawler`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GENSPARK_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`크롤링 실패: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    
+    return c.json({ 
+      success: true, 
+      content: data.content || data.markdown || '',
+      title: data.title || ''
+    })
+  } catch (error) {
+    console.error('크롤링 오류:', error)
+    return c.json({ error: '웹 페이지를 가져오는 중 오류가 발생했습니다.' }, 500)
+  }
 })
 
 export default app
