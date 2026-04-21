@@ -293,10 +293,12 @@ JSON 형식으로 응답하세요.`
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000, // 임시 감소: 2000 → 1500 (크레딧 부족 임시 해결, 26일 이후 복구)
+      max_tokens: 3000, // 3단계 분석 시스템에 맞춰 증가
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
+    
+    console.log('[AI Helper] Raw AI response (first 500 chars):', responseText.substring(0, 500))
     
     // JSON 마크다운 코드 블록 제거 (```json ... ```)
     let cleanedResponse = responseText.trim()
@@ -305,6 +307,11 @@ JSON 형식으로 응답하세요.`
     } else if (cleanedResponse.startsWith('```')) {
       cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/```\s*$/, '')
     }
+    
+    // 제어 문자 제거 (줄바꿈은 유지)
+    cleanedResponse = cleanedResponse.replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F\x7F]/g, '')
+    
+    console.log('[AI Helper] Cleaned response (first 500 chars):', cleanedResponse.substring(0, 500))
     
     // JSON 파싱 시도
     try {
