@@ -125,26 +125,64 @@ export const plannerPageHTML = `
             } catch (error) { console.error(error) }
         }
         
+        // HTML 이스케이프 함수
+        function escapeHtml(text) {
+            const div = document.createElement('div')
+            div.textContent = text
+            return div.innerHTML
+        }
+        
         async function loadSessions() {
             try {
                 const res = await axios.get(\`/api/coaching-sessions/\${user.id}\`)
                 const sessions = res.data.sessions
-                const html = sessions.map(s => \`
-                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer transition" onclick="viewSession(\${s.id})">
+                
+                // 세션 목록 렌더링
+                const sessionsList = document.getElementById('sessionsList')
+                sessionsList.innerHTML = ''
+                
+                if (sessions.length === 0) {
+                    sessionsList.innerHTML = '<p class="text-gray-500">아직 코칭 세션이 없습니다.</p>'
+                    return
+                }
+                
+                sessions.forEach(s => {
+                    const sessionDiv = document.createElement('div')
+                    sessionDiv.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer transition'
+                    sessionDiv.onclick = () => viewSession(s.id)
+                    
+                    sessionDiv.innerHTML = \`
                         <div class="flex justify-between items-start mb-2">
-                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">\${s.situationType}</span>
+                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">\${escapeHtml(s.situationType)}</span>
                             <span class="text-sm text-gray-500">\${new Date(s.sessionDate).toLocaleDateString('ko-KR')}</span>
                         </div>
-                        <p class="text-gray-700 font-semibold mb-2">\${s.context.substring(0, 100)}\${s.context.length > 100 ? '...' : ''}</p>
-                        \${s.effectivenessRating ? \`
+                        <p class="text-gray-700 font-semibold mb-2" id="context-\${s.id}"></p>
+                        <div id="rating-\${s.id}"></div>
+                    \`
+                    
+                    // 안전하게 텍스트 삽입
+                    const contextEl = sessionDiv.querySelector(\`#context-\${s.id}\`)
+                    const contextText = s.context.substring(0, 100) + (s.context.length > 100 ? '...' : '')
+                    contextEl.textContent = contextText
+                    
+                    // 별점 표시
+                    const ratingEl = sessionDiv.querySelector(\`#rating-\${s.id}\`)
+                    if (s.effectivenessRating) {
+                        ratingEl.innerHTML = \`
                             <div class="flex items-center text-yellow-500">
-                                \${' <i class="fas fa-star"></i>'.repeat(s.effectivenessRating)}
+                                \${'<i class="fas fa-star"></i>'.repeat(s.effectivenessRating)}
                             </div>
-                        \` : '<span class="text-gray-400 text-sm">피드백 대기 중</span>'}
-                    </div>
-                \`).join('')
-                document.getElementById('sessionsList').innerHTML = html || '<p class="text-gray-500">아직 코칭 세션이 없습니다.</p>'
-            } catch (error) { console.error(error) }
+                        \`
+                    } else {
+                        ratingEl.innerHTML = '<span class="text-gray-400 text-sm">피드백 대기 중</span>'
+                    }
+                    
+                    sessionsList.appendChild(sessionDiv)
+                })
+            } catch (error) { 
+                console.error('코칭 세션 로드 오류:', error)
+                document.getElementById('sessionsList').innerHTML = '<p class="text-red-500">세션을 불러오는 중 오류가 발생했습니다.</p>'
+            }
         }
         
         document.getElementById('coachingForm').addEventListener('submit', async (e) => {
@@ -174,14 +212,6 @@ export const plannerPageHTML = `
                 loading.classList.add('hidden')
             }
         })
-        
-        // HTML 안전 문자열 변환 함수
-        function escapeHtml(text) {
-            if (!text) return ''
-            const div = document.createElement('div')
-            div.textContent = text
-            return div.innerHTML
-        }
         
         function viewSession(id) {
             axios.get(\`/api/coaching-sessions/\${user.id}\`).then(res => {
