@@ -451,7 +451,7 @@ export const plannerPageHTML = `
                                     <i class="fas fa-check-circle mr-2"></i>내 평가
                                 </h4>
                                 <div class="flex items-center text-yellow-500 mb-2">
-                                    \${' <i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
+                                    \${'<i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
                                 </div>
                                 <p class="text-gray-700">\${session.plannerFeedback || '(후기 없음)'}</p>
                             </div>
