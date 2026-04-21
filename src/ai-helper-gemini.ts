@@ -1,5 +1,5 @@
 // AI 코칭 헬퍼 함수 (Google Gemini 사용 - Gemini 수준 답변 품질)
-import { GoogleGenerativeAI } from '@google/generative-ai'
+// Cloudflare Workers 환경에서는 REST API 직접 호출 (SDK 대신)
 import type { CoachingRequest, CoachingResponse, CoachingReference } from './ai-helper'
 
 /**
@@ -21,15 +21,7 @@ export async function generateAICoachingWithGemini(request: CoachingRequest): Pr
     throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.')
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash-exp',
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8000,
-      responseMimeType: 'application/json',
-    }
-  })
+  // SDK는 Cloudflare Workers와 호환되지 않으므로 REST API 사용
 
   // Director 지식 자료 섹션
   let directorKnowledgeSection = ''
@@ -172,9 +164,53 @@ ${context}
 JSON 형식으로 응답하세요.`
 
   try {
-    const result = await model.generateContent([systemPrompt, userPrompt])
-    const response = result.response
-    const jsonText = response.text()
+    // Cloudflare Workers 환경에서 REST API 직접 호출
+    // gemini-2.5-flash는 사용량 폭증으로 인해 503 에러 발생 가능성 있음
+    // gemini-2.0-flash로 안정적으로 운영 (1M tokens 입력, 8K 출력)
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    
+    // JSON 응답을 받기 위해 프롬프트에 명시
+    const requestBody = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `${systemPrompt}\n\n${userPrompt}\n\n**IMPORTANT: 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.**` }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8000,
+      }
+    }
+    
+    console.log('[Gemini AI] REST API 호출 중...')
+    console.log('[Gemini AI] API URL:', apiUrl.substring(0, 80) + '...')
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+    
+    console.log('[Gemini AI] HTTP status:', response.status)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Gemini AI] Error response:', errorText.substring(0, 500))
+      throw new Error(`Gemini API error (${response.status}): ${errorText}`)
+    }
+    
+    const result = await response.json() as any
+    console.log('[Gemini AI] Result structure:', JSON.stringify({
+      hasCandidates: !!result.candidates,
+      candidatesLength: result.candidates?.length,
+      hasContent: !!result.candidates?.[0]?.content,
+      hasParts: !!result.candidates?.[0]?.content?.parts,
+      partsLength: result.candidates?.[0]?.content?.parts?.length
+    }))
+    
+    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
     
     console.log('[Gemini AI] Raw response (first 500 chars):', jsonText.substring(0, 500))
     

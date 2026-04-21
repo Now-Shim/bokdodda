@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { generateAICoaching } from './ai-helper'
+import { generateAICoachingWithGemini } from './ai-helper-gemini'
 import { users, plannerProfiles, coachingSessions, trainingPrograms, knowledgeBase } from './data'
 import type { CoachingSession, KnowledgeBase } from './data'
 
@@ -131,22 +132,52 @@ app.post('/api/coaching-sessions', async (c) => {
     // 통합된 지식 자료
     const combinedKnowledge = directorKnowledge + externalLinkData
     
-    // AI 코칭 생성
-    const aiResponse = await generateAICoaching({
-      context,
-      situationType,
-      plannerProfile: {
-        name: user.name,
-        personalityType: profile.personalityType,
-        salesStyle: profile.salesStyle,
-        experienceYears: profile.experienceYears,
-        specialization: profile.specialization,
-        strengths: profile.strengths,
-        weaknesses: profile.weaknesses,
-      },
-      directorKnowledge: combinedKnowledge, // 업로드된 자료 + 외부 링크 데이터
-      env: c.env // Cloudflare env binding 전달
-    })
+    // AI 코칭 생성 (Gemini 우선, 폴백 OpenRouter)
+    let aiResponse
+    try {
+      console.log('[AI Coaching] Gemini API 사용 시도...')
+      aiResponse = await generateAICoachingWithGemini({
+        context,
+        situationType,
+        plannerProfile: {
+          name: user.name,
+          personalityType: profile.personalityType,
+          salesStyle: profile.salesStyle,
+          experienceYears: profile.experienceYears,
+          specialization: profile.specialization,
+          strengths: profile.strengths,
+          weaknesses: profile.weaknesses,
+        },
+        directorKnowledge: combinedKnowledge,
+        env: c.env
+      })
+      console.log('[AI Coaching] ✅ Gemini API 성공')
+    } catch (geminiError: any) {
+      console.error('[AI Coaching] ⚠️ Gemini API 실패:', geminiError)
+      console.error('[AI Coaching] 에러 상세:', JSON.stringify({
+        message: geminiError?.message || 'Unknown',
+        stack: geminiError?.stack?.substring(0, 500) || 'No stack',
+        status: geminiError?.status,
+        response: geminiError?.response
+      }, null, 2))
+      console.warn('[AI Coaching] OpenRouter 폴백 시작...')
+      aiResponse = await generateAICoaching({
+        context,
+        situationType,
+        plannerProfile: {
+          name: user.name,
+          personalityType: profile.personalityType,
+          salesStyle: profile.salesStyle,
+          experienceYears: profile.experienceYears,
+          specialization: profile.specialization,
+          strengths: profile.strengths,
+          weaknesses: profile.weaknesses,
+        },
+        directorKnowledge: combinedKnowledge,
+        env: c.env
+      })
+      console.log('[AI Coaching] ✅ OpenRouter 폴백 성공')
+    }
     
     const newSession: CoachingSession = {
       id: coachingSessions.length + 1,
