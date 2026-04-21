@@ -351,9 +351,20 @@ export function renderDirectorPage(c: Context) {
                 
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-pen-fancy text-purple-600 mr-2"></i>Director 피드백 (30년 노하우 반영)
+                        <i class="fas fa-pen-fancy text-purple-600 mr-2"></i>Director 피드백 (일반 의견)
                     </label>
-                    <textarea id="modal-directorFeedback" rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="이 코칭 세션에 대한 센터장님의 의견을 작성해주세요.&#10;&#10;예시:&#10;- 우수 사례. ESTJ 성향에게는 '체계적으로 천천히'가 핵심입니다.&#10;- 이 케이스를 신규 설계사 교육에 활용 가능합니다.&#10;- 다만, 클로징 단계에서 추가 교육이 필요해 보입니다."></textarea>
+                    <textarea id="modal-directorFeedback" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="이 코칭 세션에 대한 센터장님의 의견을 작성해주세요.&#10;&#10;예시:&#10;- 우수 사례. ESTJ 성향에게는 '체계적으로 천천히'가 핵심입니다.&#10;- 이 케이스를 신규 설계사 교육에 활용 가능합니다.&#10;- 다만, 클로징 단계에서 추가 교육이 필요해 보입니다."></textarea>
+                </div>
+                
+                <div class="mb-6 bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+                    <label class="block text-sm font-semibold text-amber-900 mb-2">
+                        <i class="fas fa-medal text-amber-600 mr-2"></i>30년 노하우 추가 (Relearning용)
+                    </label>
+                    <p class="text-xs text-amber-700 mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        이 내용은 AI 코칭 재학습에 사용되어, 향후 유사한 상황에서 더욱 정확한 코칭을 제공합니다.
+                    </p>
+                    <textarea id="modal-director30YearsKnowledge" rows="5" class="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" placeholder="30년 경험을 바탕으로 한 추가 노하우를 작성해주세요.&#10;&#10;예시:&#10;- 이런 유형의 고객은 '○○ 접근법'이 효과적입니다.&#10;- △△ 상황에서는 반드시 '◇◇ 화법'을 사용하세요.&#10;- 실제 성공 사례: [구체적 케이스 설명]&#10;- 주의사항: [피해야 할 접근법]"></textarea>
                 </div>
                 
                 <div class="mb-6">
@@ -917,6 +928,7 @@ export function renderDirectorPage(c: Context) {
             const sessionId = parseInt(document.getElementById('modal-sessionId').value)
             const rating = parseInt(document.getElementById('modal-rating').value)
             const feedback = document.getElementById('modal-directorFeedback').value.trim()
+            const director30YearsKnowledge = document.getElementById('modal-director30YearsKnowledge').value.trim()
             const useForLearning = document.getElementById('modal-useForLearning').checked
             
             if (!feedback) {
@@ -928,6 +940,7 @@ export function renderDirectorPage(c: Context) {
                 await axios.post('/api/director/feedback', {
                     sessionId,
                     directorFeedback: feedback,
+                    director30YearsKnowledge, // 30년 노하우 추가
                     directorRating: rating,
                     useForLearning
                 })

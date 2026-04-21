@@ -21,6 +21,18 @@ export interface PlannerProfile {
   totalTrainingCompleted: number
 }
 
+// 코칭 카테고리 타입
+export type CoachingCategory = 
+  | '세일즈프로세스' 
+  | '상품내용' 
+  | '약관조항' 
+  | '보험업법등법률' 
+  | '사례검토' 
+  | '동기부여' 
+  | '통계자료' 
+  | '보험비즈니스' 
+  | '기타'
+
 export interface CoachingSession {
   id: number
   plannerId: number
@@ -28,31 +40,48 @@ export interface CoachingSession {
   context: string
   situationType: string
   
-  // AI 코칭 응답 (새 구조)
-  aiAnalysis: string // 보험 세일즈 프로세스 & 현 단계 & 컨셉 & 상품 selling point
-  salesProcess?: string // 보험 세일즈 프로세스
-  currentStage?: string // 현재 단계
-  productSellingPoint?: string // 상품 판매 포인트
+  // 1. AI 분석 (새 구조 - 3단계 분석 시스템)
+  analyzedQuestion?: string // 파악된 질문 (질문의 요지)
+  category?: CoachingCategory // 카테고리
+  keyPoints?: string // 핵심 포인트
   
-  coachingAdvice: string // 구체적 대화 흐름 & 필요 지식 & 매니저 요청
-  dialogueScript?: string // 구체적 대화 흐름/스크립트
-  requiredKnowledge?: string // 설계사에게 필요한 지식
-  managerRequest?: string // 매니저에게 요청할 사항
+  // 2. 코칭 (근거 기반 상세 코칭)
+  coachingPoint?: string // 코칭 포인트 (카테고리별 핵심)
+  coachingEvidence?: string // 코칭 근거 (약관/법률/인문학적 근거)
+  dialogue?: string // 화법 (고객과의 4~5번 대화)
+  learningNeeds?: string // 학습 필요 내용
+  actionGuidelines?: string // 구체적인 행동지침 (다양한 시도 방법)
   
-  recommendedApproach: string // 설계사 성향 기반 참신한 아이디어
-  tacitKnowledgeApplied: string // 30년 노하우 (AI 내부 참조용)
-  references?: Array<{ source: string, content: string, url?: string }> // 참조 자료 (근거)
+  // 3. 설계사 Feedback
+  plannerAdditionalRequest?: string // 추가 요청 사항
+  plannerPersonalityFeedback?: string // 본인 성향 추가 정보 / 감각적 반응
+  
+  // 참조 자료 (근거)
+  references?: Array<{ source: string, content: string, url?: string }>
+  
+  // 기존 필드 (하위 호환)
+  aiAnalysis: string
+  salesProcess?: string
+  currentStage?: string
+  productSellingPoint?: string
+  coachingAdvice: string
+  dialogueScript?: string
+  requiredKnowledge?: string
+  managerRequest?: string
+  recommendedApproach: string
+  tacitKnowledgeApplied: string
   
   isShared: boolean
   effectivenessRating?: number
   plannerFeedback?: string
   
-  // 관리자/Director 관련
-  managerNote?: string // 관리자 내부 노트
+  // Director 관련
+  managerNote?: string
   directorFeedback?: string // Director 피드백
-  directorRating?: number // Director 평가 (1-5)
-  isValidated: boolean // Director 검증 여부
-  useForLearning: boolean // 재학습 데이터로 사용 여부
+  director30YearsKnowledge?: string // Director 30년 노하우 추가 (Relearning용)
+  directorRating?: number
+  isValidated: boolean
+  useForLearning: boolean
 }
 
 export interface TrainingProgram {
@@ -69,9 +98,9 @@ export interface TrainingProgram {
 export interface KnowledgeBase {
   id: number
   title: string
-  category: string
+  category: CoachingCategory // 카테고리 타입 통일
   content: string
-  fileType?: 'text' | 'file' // 'text': 직접 입력, 'file': 파일 업로드
+  fileType?: 'text' | 'file' | 'pdf' // 'text': 직접 입력, 'file': 파일 업로드, 'pdf': PDF 업로드
   fileName?: string // 업로드된 파일명
   fileSize?: number // 파일 크기 (bytes)
   priority: boolean

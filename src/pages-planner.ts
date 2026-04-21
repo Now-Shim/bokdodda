@@ -178,62 +178,119 @@ export const plannerPageHTML = `
                 if (!session) return
                 
                 document.getElementById('sessionDetail').innerHTML = \`
-                    <div class="space-y-4">
-                        <!-- 1. 상황 & 질문 -->
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-gray-800 mb-2"><i class="fas fa-comment-dots mr-2"></i>상황 & 질문</h4>
-                            <p class="text-gray-700">\${session.context}</p>
-                        </div>
-                        
-                        <!-- 2. AI 분석 (보험 세일즈 프로세스, 현 단계 & 컨셉, 상품 Selling Point) -->
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-blue-800 mb-3"><i class="fas fa-search mr-2"></i>AI 분석</h4>
-                            <div class="space-y-3">
-                                <div>
-                                    <h5 class="font-semibold text-blue-900 mb-1">📊 보험 세일즈 프로세스</h5>
-                                    <p class="text-gray-700 ml-4">\${session.salesProcess || '분석 중...'}</p>
+                    <div class="space-y-6">
+                        <!-- ===== 1. AI 분석 ===== -->
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
+                            <h4 class="font-bold text-blue-900 mb-4 text-xl">
+                                <i class="fas fa-brain mr-2"></i>1️⃣ AI 분석
+                            </h4>
+                            <div class="space-y-4">
+                                <!-- 파악된 질문 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
+                                        <i class="fas fa-question-circle mr-2"></i>파악된 질문 (질문의 요지)
+                                    </h5>
+                                    <p class="text-gray-800 ml-6">\${session.analyzedQuestion || session.context}</p>
                                 </div>
-                                <div>
-                                    <h5 class="font-semibold text-blue-900 mb-1">📍 현 단계 & 컨셉</h5>
-                                    <p class="text-gray-700 ml-4">\${session.currentStage || session.aiAnalysis}</p>
+                                
+                                <!-- 카테고리 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
+                                        <i class="fas fa-tag mr-2"></i>카테고리
+                                    </h5>
+                                    <span class="ml-6 inline-block bg-blue-600 text-white px-4 py-2 rounded-full font-semibold">
+                                        \${session.category || session.situationType}
+                                    </span>
                                 </div>
-                                <div>
-                                    <h5 class="font-semibold text-blue-900 mb-1">💎 상품 Selling Point</h5>
-                                    <p class="text-gray-700 ml-4">\${session.productSellingPoint || '고객 맞춤 상품 분석 중...'}</p>
+                                
+                                <!-- 핵심 포인트 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
+                                        <i class="fas fa-bullseye mr-2"></i>핵심 포인트
+                                    </h5>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.keyPoints || session.aiAnalysis}</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- 3. 코칭 조언 (구체적 대화 흐름, 필요 지식, 매니저 요청) -->
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-purple-800 mb-3"><i class="fas fa-lightbulb mr-2"></i>코칭 조언</h4>
-                            <div class="space-y-3">
-                                <div>
-                                    <h5 class="font-semibold text-purple-900 mb-1">💬 구체적 대화 흐름</h5>
-                                    <div class="text-gray-700 ml-4 bg-white p-3 rounded border border-purple-200">
-                                        <pre class="whitespace-pre-wrap font-sans text-sm">\${session.dialogueScript || session.coachingAdvice}</pre>
+                        <!-- ===== 2. 코칭 ===== -->
+                        <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
+                            <h4 class="font-bold text-purple-900 mb-4 text-xl">
+                                <i class="fas fa-chalkboard-teacher mr-2"></i>2️⃣ 코칭
+                            </h4>
+                            <div class="space-y-4">
+                                <!-- 코칭 포인트 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
+                                        <i class="fas fa-lightbulb mr-2"></i>코칭 포인트 (카테고리별 핵심)
+                                    </h5>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.coachingPoint || session.coachingAdvice}</div>
+                                </div>
+                                
+                                <!-- 코칭 근거 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
+                                    <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
+                                        <i class="fas fa-file-contract mr-2"></i>코칭 근거 (약관/법률/인문학적 근거)
+                                    </h5>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.coachingEvidence || '근거 분석 중...'}</div>
+                                </div>
+                                
+                                <!-- 화법 (4~5번 대화) -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
+                                        <i class="fas fa-comments mr-2"></i>화법 (고객과의 대화 시나리오)
+                                    </h5>
+                                    <div class="ml-6 bg-gray-50 p-4 rounded border border-purple-200">
+                                        <pre class="whitespace-pre-wrap font-sans text-sm text-gray-800">\${session.dialogue || session.dialogueScript || '대화 스크립트 생성 중...'}</pre>
                                     </div>
                                 </div>
-                                \${session.requiredKnowledge ? \`
-                                <div>
-                                    <h5 class="font-semibold text-purple-900 mb-1">📚 필요 지식</h5>
-                                    <p class="text-gray-700 ml-4">\${session.requiredKnowledge}</p>
+                                
+                                <!-- 학습 필요 내용 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
+                                        <i class="fas fa-book-reader mr-2"></i>학습 필요 내용
+                                    </h5>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.learningNeeds || session.requiredKnowledge || '추가 학습 없음'}</div>
                                 </div>
-                                \` : ''}
-                                <!-- 매니저 요청은 설계사에게 표시하지 않음 (매니저 전용) -->
+                                
+                                <!-- 구체적인 행동지침 -->
+                                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+                                    <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
+                                        <i class="fas fa-tasks mr-2"></i>구체적인 행동지침 (다양한 시도 방법)
+                                    </h5>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.actionGuidelines || session.recommendedApproach}</div>
+                                </div>
                             </div>
                         </div>
                         
-                        <!-- 4. 추천 접근법 (설계사 성향 기반 참신한 아이디어) -->
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <h4 class="font-bold text-green-800 mb-2"><i class="fas fa-route mr-2"></i>추천 접근법</h4>
-                            <pre class="text-gray-700 whitespace-pre-wrap font-sans">\${session.recommendedApproach}</pre>
+                        <!-- ===== 참조 자료 (근거) ===== -->
+                        \${session.references && session.references.length > 0 ? \`
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border-2 border-yellow-300">
+                            <h4 class="font-bold text-yellow-900 mb-4 text-xl">
+                                <i class="fas fa-link mr-2"></i>참조 자료 (근거)
+                            </h4>
+                            <div class="space-y-3">
+                                \${session.references.map((ref, idx) => \`
+                                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                                        <h5 class="font-semibold text-yellow-800 mb-2">
+                                            <i class="fas fa-file-alt mr-2"></i>[\${idx + 1}] \${ref.source}
+                                        </h5>
+                                        <p class="text-gray-700 ml-6 mb-2">\${ref.content}</p>
+                                        \${ref.url ? \`<a href="\${ref.url}" target="_blank" class="ml-6 text-blue-600 hover:underline text-sm">
+                                            <i class="fas fa-external-link-alt mr-1"></i>출처 링크
+                                        </a>\` : ''}
+                                    </div>
+                                \`).join('')}
+                            </div>
                         </div>
+                        \` : ''}
                         
-                        <!-- 5. 30년 현장 노하우 (내부 참조) -->
-                        <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
-                            <h4 class="font-bold text-yellow-800 mb-2"><i class="fas fa-medal mr-2"></i>30년 현장 노하우</h4>
-                            <p class="text-gray-700">\${session.tacitKnowledgeApplied}</p>
+                        <!-- 30년 노하우 -->
+                        <div class="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-xl border-2 border-amber-300 border-l-8">
+                            <h4 class="font-bold text-amber-900 mb-3 text-xl">
+                                <i class="fas fa-medal mr-2"></i>30년 현장 노하우
+                            </h4>
+                            <p class="text-gray-800 italic">\${session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'}</p>
                         </div>
                         
                         \${!session.effectivenessRating ? \`
