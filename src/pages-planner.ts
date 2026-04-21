@@ -175,6 +175,14 @@ export const plannerPageHTML = `
             }
         })
         
+        // HTML 안전 문자열 변환 함수
+        function escapeHtml(text) {
+            if (!text) return ''
+            const div = document.createElement('div')
+            div.textContent = text
+            return div.innerHTML
+        }
+        
         function viewSession(id) {
             axios.get(\`/api/coaching-sessions/\${user.id}\`).then(res => {
                 const session = res.data.sessions.find(s => s.id === id)
@@ -186,11 +194,27 @@ export const plannerPageHTML = `
                     hasCoachingEvidence: !!session.coachingEvidence,
                     hasDialogue: !!session.dialogue,
                     hasLearningNeeds: !!session.learningNeeds,
-                    coachingEvidence: session.coachingEvidence?.substring(0, 100),
-                    dialogue: session.dialogue?.substring(0, 100)
+                    coachingEvidenceLength: session.coachingEvidence?.length,
+                    dialogueLength: session.dialogue?.length,
+                    learningNeedsLength: session.learningNeeds?.length
                 })
                 
-                document.getElementById('sessionDetail').innerHTML = \`
+                // 안전하게 데이터 준비
+                const safeData = {
+                    analyzedQuestion: session.analyzedQuestion || session.context,
+                    category: session.category || session.situationType,
+                    keyPoints: session.keyPoints || session.aiAnalysis,
+                    coachingPoint: session.coachingPoint || session.coachingAdvice,
+                    coachingEvidence: session.coachingEvidence || '근거 분석 중...',
+                    dialogue: session.dialogue || session.dialogueScript || '대화 스크립트 생성 중...',
+                    learningNeeds: session.learningNeeds || session.requiredKnowledge || '추가 학습 없음',
+                    actionGuidelines: session.actionGuidelines || session.recommendedApproach,
+                    tacitKnowledge: session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'
+                }
+                
+                // DOM 요소 생성 및 데이터 안전하게 삽입
+                const detailContainer = document.getElementById('sessionDetail')
+                detailContainer.innerHTML = \`
                     <div class="space-y-6">
                         <!-- ===== 1. AI 분석 ===== -->
                         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
@@ -203,7 +227,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-question-circle mr-2"></i>파악된 질문 (질문의 요지)
                                     </h5>
-                                    <p class="text-gray-800 ml-6">\${session.analyzedQuestion || session.context}</p>
+                                    <p class="text-gray-800 ml-6" id="analyzed-question"></p>
                                 </div>
                                 
                                 <!-- 카테고리 -->
@@ -211,9 +235,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-tag mr-2"></i>카테고리
                                     </h5>
-                                    <span class="ml-6 inline-block bg-blue-600 text-white px-4 py-2 rounded-full font-semibold">
-                                        \${session.category || session.situationType}
-                                    </span>
+                                    <span class="ml-6 inline-block bg-blue-600 text-white px-4 py-2 rounded-full font-semibold" id="category"></span>
                                 </div>
                                 
                                 <!-- 핵심 포인트 -->
@@ -221,7 +243,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-bullseye mr-2"></i>핵심 포인트
                                     </h5>
-                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.keyPoints || session.aiAnalysis}</div>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap" id="key-points"></div>
                                 </div>
                             </div>
                         </div>
@@ -237,7 +259,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
                                         <i class="fas fa-lightbulb mr-2"></i>코칭 포인트 (카테고리별 핵심)
                                     </h5>
-                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.coachingPoint || session.coachingAdvice}</div>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap" id="coaching-point"></div>
                                 </div>
                                 
                                 <!-- 코칭 근거 -->
@@ -245,7 +267,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
                                         <i class="fas fa-file-contract mr-2"></i>코칭 근거 (약관/법률/인문학적 근거)
                                     </h5>
-                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.coachingEvidence || '근거 분석 중...'}</div>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap" id="coaching-evidence"></div>
                                 </div>
                                 
                                 <!-- 화법 (4~5번 대화) -->
@@ -254,7 +276,7 @@ export const plannerPageHTML = `
                                         <i class="fas fa-comments mr-2"></i>화법 (고객과의 대화 시나리오)
                                     </h5>
                                     <div class="ml-6 bg-gray-50 p-4 rounded border border-purple-200">
-                                        <pre class="whitespace-pre-wrap font-sans text-sm text-gray-800">\${session.dialogue || session.dialogueScript || '대화 스크립트 생성 중...'}</pre>
+                                        <pre class="whitespace-pre-wrap font-sans text-sm text-gray-800" id="dialogue"></pre>
                                     </div>
                                 </div>
                                 
@@ -263,7 +285,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
                                         <i class="fas fa-book-reader mr-2"></i>학습 필요 내용
                                     </h5>
-                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.learningNeeds || session.requiredKnowledge || '추가 학습 없음'}</div>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap" id="learning-needs"></div>
                                 </div>
                                 
                                 <!-- 구체적인 행동지침 -->
@@ -271,7 +293,7 @@ export const plannerPageHTML = `
                                     <h5 class="font-semibold text-purple-800 mb-2 flex items-center">
                                         <i class="fas fa-tasks mr-2"></i>구체적인 행동지침 (다양한 시도 방법)
                                     </h5>
-                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap">\${session.actionGuidelines || session.recommendedApproach}</div>
+                                    <div class="ml-6 text-gray-800 whitespace-pre-wrap" id="action-guidelines"></div>
                                 </div>
                             </div>
                         </div>
@@ -380,6 +402,16 @@ export const plannerPageHTML = `
                         \`}
                     </div>
                 \`
+                
+                // 데이터를 안전하게 textContent로 삽입
+                document.getElementById('analyzed-question').textContent = safeData.analyzedQuestion
+                document.getElementById('category').textContent = safeData.category
+                document.getElementById('key-points').textContent = safeData.keyPoints
+                document.getElementById('coaching-point').textContent = safeData.coachingPoint
+                document.getElementById('coaching-evidence').textContent = safeData.coachingEvidence
+                document.getElementById('dialogue').textContent = safeData.dialogue
+                document.getElementById('learning-needs').textContent = safeData.learningNeeds
+                document.getElementById('action-guidelines').textContent = safeData.actionGuidelines
                 
                 if (!session.effectivenessRating) {
                     document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
