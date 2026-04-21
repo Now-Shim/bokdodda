@@ -1,0 +1,9 @@
+# Google Gemini API 키 (필수)
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# GenSpark Token (크롤링용)
+GENSPARK_TOKEN=76ikrNLufxO1nWFA7NWzNggaMKfvP573
+
+# OpenRouter API (폴백용)
+OPENAI_API_KEY=sk-or-v1-15a...abf
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
