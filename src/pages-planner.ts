@@ -99,14 +99,23 @@ export const plannerPageHTML = `
     
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script>
+        console.log('[DEBUG] localStorage user:', localStorage.getItem('user'))
         const user = JSON.parse(localStorage.getItem('user') || '{}')
-        if (!user.id || user.role !== 'planner') window.location.href = '/'
+        console.log('[DEBUG] Parsed user:', user)
         
-        document.getElementById('userName').textContent = user.name
+        if (!user.id || user.role !== 'planner') {
+            console.warn('[DEBUG] Not logged in or not a planner, redirecting...')
+            window.location.href = '/'
+        }
+        
+        document.getElementById('userName').textContent = user.name || '사용자'
+        console.log('[DEBUG] Page initialized for:', user.name)
         
         async function loadProfile() {
+            console.log('[DEBUG] Loading profile for user ID:', user.id)
             try {
                 const res = await axios.get(\`/api/planner/\${user.id}\`)
+                console.log('[DEBUG] Profile API response:', res.data)
                 const { profile } = res.data
                 document.getElementById('profileInfo').innerHTML = \`
                     <div class="bg-purple-50 p-4 rounded-lg">
@@ -122,7 +131,11 @@ export const plannerPageHTML = `
                         <p class="font-bold text-green-700">\${profile.totalCoachingSessions}회</p>
                     </div>
                 \`
-            } catch (error) { console.error(error) }
+                console.log('[DEBUG] Profile loaded successfully')
+            } catch (error) { 
+                console.error('[DEBUG] Profile load error:', error)
+                alert('프로필 로드 실패: ' + error.message)
+            }
         }
         
         // HTML 이스케이프 함수
@@ -133,10 +146,12 @@ export const plannerPageHTML = `
         }
         
         async function loadSessions() {
+            console.log('[DEBUG] Loading sessions for user ID:', user.id)
             try {
                 const res = await axios.get(\`/api/coaching-sessions/\${user.id}\`)
-                console.log('API Response:', res.data)
+                console.log('[DEBUG] Sessions API Response:', res.data)
                 const sessions = res.data.sessions || []
+                console.log('[DEBUG] Sessions count:', sessions.length)
                 
                 // 세션 목록 렌더링
                 const sessionsList = document.getElementById('sessionsList')
@@ -180,8 +195,9 @@ export const plannerPageHTML = `
                     
                     sessionsList.appendChild(sessionDiv)
                 })
+                console.log('[DEBUG] Sessions rendered successfully')
             } catch (error) { 
-                console.error('코칭 세션 로드 오류:', error)
+                console.error('[DEBUG] Sessions load error:', error)
                 const sessionsList = document.getElementById('sessionsList')
                 if (sessionsList) {
                     sessionsList.innerHTML = '<p class="text-red-500">세션을 불러오는 중 오류가 발생했습니다.</p>'
@@ -580,8 +596,10 @@ export const plannerPageHTML = `
         })
         
         // 초기 데이터 로드
+        console.log('[DEBUG] Starting initial data load...')
         loadProfile()
         loadSessions()
+        console.log('[DEBUG] Page setup complete')
     </script>
 </body>
 </html>
