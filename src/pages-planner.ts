@@ -29,7 +29,7 @@ export const plannerPageHTML = `
             </div>
             <div class="flex items-center space-x-4">
                 <span id="userName" class="font-semibold"></span>
-                <button onclick="logout()" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-gray-100">
+                <button id="logoutBtn" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-gray-100">
                     <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
                 </button>
             </div>
@@ -135,7 +135,8 @@ export const plannerPageHTML = `
         async function loadSessions() {
             try {
                 const res = await axios.get(\`/api/coaching-sessions/\${user.id}\`)
-                const sessions = res.data.sessions
+                console.log('API Response:', res.data)
+                const sessions = res.data.sessions || []
                 
                 // 세션 목록 렌더링
                 const sessionsList = document.getElementById('sessionsList')
@@ -181,7 +182,10 @@ export const plannerPageHTML = `
                 })
             } catch (error) { 
                 console.error('코칭 세션 로드 오류:', error)
-                document.getElementById('sessionsList').innerHTML = '<p class="text-red-500">세션을 불러오는 중 오류가 발생했습니다.</p>'
+                const sessionsList = document.getElementById('sessionsList')
+                if (sessionsList) {
+                    sessionsList.innerHTML = '<p class="text-red-500">세션을 불러오는 중 오류가 발생했습니다.</p>'
+                }
             }
         }
         
@@ -201,10 +205,16 @@ export const plannerPageHTML = `
                     context,
                     situationType
                 })
-                alert('AI 코칭이 완료되었습니다!')
-                document.getElementById('context').value = ''
-                loadSessions()
-                viewSession(res.data.session.id)
+                
+                if (res.data.success) {
+                    alert('AI 코칭이 완료되었습니다!')
+                    document.getElementById('context').value = ''
+                    document.getElementById('situationType').value = '신규고객'
+                    await loadSessions()
+                    viewSession(res.data.session.id)
+                } else {
+                    throw new Error('코칭 세션 생성 실패')
+                }
             } catch (error) {
                 alert('오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
             } finally {
@@ -561,11 +571,15 @@ export const plannerPageHTML = `
             }
         }
         
-        function logout() {
-            localStorage.removeItem('user')
-            window.location.href = '/'
-        }
+        // 로그아웃 버튼 이벤트
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('user')
+                window.location.href = '/'
+            }
+        })
         
+        // 초기 데이터 로드
         loadProfile()
         loadSessions()
     </script>
