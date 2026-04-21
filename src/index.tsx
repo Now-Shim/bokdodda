@@ -253,12 +253,21 @@ app.post('/api/coaching-sessions/:id/conversation', async (c) => {
       .map(msg => `${msg.sender === 'planner' ? '설계사' : 'AI 코치'}: ${msg.message}`)
       .join('\n')
     
-    const contextForAI = `
+    // OpenAI API를 직접 호출하여 대화형 답변 생성
+    const OPENROUTER_API_KEY = c.env.OPENROUTER_API_KEY || c.env.OPENAI_API_KEY
+    
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured')
+    }
+    
+    const conversationPrompt = `당신은 30년 경력의 보험 설계사 코치입니다.
+
 [기존 코칭 세션]
 - 원래 질문: ${session.context}
 - 상황 유형: ${session.situationType}
 - AI 분석: ${session.analyzedQuestion || session.aiAnalysis}
 - 코칭 조언: ${session.coachingPoint || session.coachingAdvice}
+${session.coachingEvidence ? `- 코칭 근거: ${session.coachingEvidence}` : ''}
 
 [대화 이력]
 ${conversationHistory}
@@ -266,27 +275,44 @@ ${conversationHistory}
 [설계사 추가 질문]
 ${message}
 
-위 추가 질문에 대해 간결하고 명확하게 답변해주세요. 기존 코칭 내용과 연관지어 설명하고, 필요하면 구체적인 근거(약관, 의료정보, 통계 등)를 제시하세요.
-`
-    
-    // AI 응답 생성 (간단한 follow-up 답변)
-    const aiResponse = await generateAICoaching({
-      context: contextForAI,
-      situationType: session.situationType,
-      plannerProfile: {
-        name: user.name,
-        personalityType: profile.personalityType,
-        salesStyle: profile.salesStyle,
-        experienceYears: profile.experienceYears,
-        specialization: profile.specialization,
-        strengths: profile.strengths,
-        weaknesses: profile.weaknesses,
+**답변 지침:**
+1. 위 추가 질문에 대해 간결하고 명확하게 답변해주세요
+2. 기존 코칭 내용과 연관지어 설명하세요
+3. 필요하면 구체적인 근거를 제시하세요:
+   - 약관: 보험사명, 상품명, 조항 (예: 제X조 X항)
+   - 의료정보: KCD-10 질병코드, 치료 과정
+   - 법률: 보험업법 제XX조, 금융감독원 규정
+   - 통계: 출처, 연도, 구체적 수치
+4. 일반 대화체로 답변하세요 (JSON 형식 사용 금지)
+5. 200-400자 내외로 답변하세요
+
+답변만 작성하고, 다른 설명은 추가하지 마세요.`
+
+    const conversationResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://bukdotda.com',
+        'X-Title': '북돋다 - AI 코칭 대화'
       },
-      env: c.env
+      body: JSON.stringify({
+        model: 'openai/gpt-4o',
+        messages: [
+          { role: 'system', content: '당신은 30년 경력의 보험 설계사 전문 코치입니다. 간결하고 명확하게 답변하며, 필요시 구체적인 근거(약관, 의료정보, 법률, 통계)를 제시합니다.' },
+          { role: 'user', content: conversationPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
     })
     
-    // AI 응답을 간단하게 정리 (coachingAdvice 또는 aiAnalysis 사용)
-    const aiMessageText = aiResponse.coachingPoint || aiResponse.coachingAdvice || aiResponse.aiAnalysis
+    if (!conversationResponse.ok) {
+      throw new Error(`OpenRouter API 오류: ${conversationResponse.status}`)
+    }
+    
+    const conversationData = await conversationResponse.json()
+    const aiMessageText = conversationData.choices[0]?.message?.content || '죄송합니다. 답변을 생성하는 중 오류가 발생했습니다.'
     
     // AI 메시지 추가
     const aiMessage = {
