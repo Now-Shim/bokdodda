@@ -325,7 +325,7 @@ export const plannerPageHTML = `
                             <h4 class="font-bold text-amber-900 mb-3 text-xl">
                                 <i class="fas fa-medal mr-2"></i>30년 현장 노하우
                             </h4>
-                            <p class="text-gray-800 italic">\${session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'}</p>
+                            <p class="text-gray-800 italic" id="tacit-knowledge"></p>
                         </div>
                         
                         <!-- ===== 대화창 (추가 질문) ===== -->
@@ -404,14 +404,35 @@ export const plannerPageHTML = `
                 \`
                 
                 // 데이터를 안전하게 textContent로 삽입
-                document.getElementById('analyzed-question').textContent = safeData.analyzedQuestion
-                document.getElementById('category').textContent = safeData.category
-                document.getElementById('key-points').textContent = safeData.keyPoints
-                document.getElementById('coaching-point').textContent = safeData.coachingPoint
-                document.getElementById('coaching-evidence').textContent = safeData.coachingEvidence
-                document.getElementById('dialogue').textContent = safeData.dialogue
-                document.getElementById('learning-needs').textContent = safeData.learningNeeds
-                document.getElementById('action-guidelines').textContent = safeData.actionGuidelines
+                const setTextContent = (id: string, text: string) => {
+                    const element = document.getElementById(id)
+                    if (element) {
+                        element.textContent = text
+                    } else {
+                        console.warn(\`Element not found: \${id}\`)
+                    }
+                }
+                
+                // DOM이 완전히 렌더링될 때까지 약간 대기
+                setTimeout(() => {
+                    setTextContent('analyzed-question', safeData.analyzedQuestion)
+                    setTextContent('category', safeData.category)
+                    setTextContent('key-points', safeData.keyPoints)
+                    setTextContent('coaching-point', safeData.coachingPoint)
+                    setTextContent('coaching-evidence', safeData.coachingEvidence)
+                    setTextContent('dialogue', safeData.dialogue)
+                    setTextContent('learning-needs', safeData.learningNeeds)
+                    setTextContent('action-guidelines', safeData.actionGuidelines)
+                    setTextContent('tacit-knowledge', safeData.tacitKnowledge)
+                    
+                    console.log('✅ Data inserted successfully:', {
+                        analyzedQuestion: safeData.analyzedQuestion?.substring(0, 50),
+                        category: safeData.category,
+                        coachingEvidence: safeData.coachingEvidence?.substring(0, 100),
+                        dialogue: safeData.dialogue?.substring(0, 100),
+                        learningNeeds: safeData.learningNeeds
+                    })
+                }, 100)
                 
                 if (!session.effectivenessRating) {
                     document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
