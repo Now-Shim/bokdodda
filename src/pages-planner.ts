@@ -460,7 +460,7 @@ export const plannerPageHTML = `
                 \`
                 
                 // 데이터를 안전하게 textContent로 삽입
-                const setTextContent = (id: string, text: string) => {
+                const setTextContent = (id, text) => {
                     const element = document.getElementById(id)
                     if (element) {
                         element.textContent = text
