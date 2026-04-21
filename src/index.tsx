@@ -215,6 +215,99 @@ app.post('/api/coaching-sessions/:id/feedback', async (c) => {
   return c.json({ success: true, session })
 })
 
+// 코칭 세션 대화 (추가 질문)
+app.post('/api/coaching-sessions/:id/conversation', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { message } = await c.req.json()
+  
+  const session = coachingSessions.find(s => s.id === id)
+  if (!session) {
+    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+  }
+  
+  // 설계사 프로필 가져오기
+  const user = users.find(u => u.id === session.plannerId)
+  const profile = plannerProfiles.find(p => p.userId === session.plannerId)
+  
+  if (!user || !profile) {
+    return c.json({ error: '설계사를 찾을 수 없습니다.' }, 404)
+  }
+  
+  try {
+    // conversationMessages 초기화 (없으면)
+    if (!session.conversationMessages) {
+      session.conversationMessages = []
+    }
+    
+    // 사용자 메시지 추가
+    const userMessage = {
+      id: session.conversationMessages.length + 1,
+      sender: 'planner' as const,
+      message,
+      timestamp: new Date().toISOString()
+    }
+    session.conversationMessages.push(userMessage)
+    
+    // 기존 코칭 컨텍스트 + 대화 이력 구성
+    const conversationHistory = session.conversationMessages
+      .map(msg => `${msg.sender === 'planner' ? '설계사' : 'AI 코치'}: ${msg.message}`)
+      .join('\n')
+    
+    const contextForAI = `
+[기존 코칭 세션]
+- 원래 질문: ${session.context}
+- 상황 유형: ${session.situationType}
+- AI 분석: ${session.analyzedQuestion || session.aiAnalysis}
+- 코칭 조언: ${session.coachingPoint || session.coachingAdvice}
+
+[대화 이력]
+${conversationHistory}
+
+[설계사 추가 질문]
+${message}
+
+위 추가 질문에 대해 간결하고 명확하게 답변해주세요. 기존 코칭 내용과 연관지어 설명하고, 필요하면 구체적인 근거(약관, 의료정보, 통계 등)를 제시하세요.
+`
+    
+    // AI 응답 생성 (간단한 follow-up 답변)
+    const aiResponse = await generateAICoaching({
+      context: contextForAI,
+      situationType: session.situationType,
+      plannerProfile: {
+        name: user.name,
+        personalityType: profile.personalityType,
+        salesStyle: profile.salesStyle,
+        experienceYears: profile.experienceYears,
+        specialization: profile.specialization,
+        strengths: profile.strengths,
+        weaknesses: profile.weaknesses,
+      },
+      env: c.env
+    })
+    
+    // AI 응답을 간단하게 정리 (coachingAdvice 또는 aiAnalysis 사용)
+    const aiMessageText = aiResponse.coachingPoint || aiResponse.coachingAdvice || aiResponse.aiAnalysis
+    
+    // AI 메시지 추가
+    const aiMessage = {
+      id: session.conversationMessages.length + 1,
+      sender: 'ai' as const,
+      message: aiMessageText,
+      timestamp: new Date().toISOString()
+    }
+    session.conversationMessages.push(aiMessage)
+    
+    return c.json({ 
+      success: true, 
+      aiResponse: aiMessageText,
+      conversationMessages: session.conversationMessages
+    })
+  } catch (error) {
+    console.error('대화 처리 오류:', error)
+    return c.json({ error: '대화 처리 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 관리자 - 전체 현황
 app.get('/api/manager/overview', (c) => {
   const totalPlanners = users.filter(u => u.role === 'planner').length

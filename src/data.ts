@@ -53,9 +53,13 @@ export interface CoachingSession {
   learningNeeds?: string // 학습 필요 내용
   actionGuidelines?: string // 구체적인 행동지침 (다양한 시도 방법)
   
-  // 3. 설계사 Feedback
-  plannerAdditionalRequest?: string // 추가 요청 사항
-  plannerPersonalityFeedback?: string // 본인 성향 추가 정보 / 감각적 반응
+  // 3. 설계사 Feedback (대화창 형태)
+  conversationMessages?: Array<{
+    id: number
+    sender: 'planner' | 'ai'
+    message: string
+    timestamp: string
+  }>
   
   // 참조 자료 (근거)
   references?: Array<{ source: string, content: string, url?: string }>

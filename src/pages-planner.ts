@@ -293,9 +293,46 @@ export const plannerPageHTML = `
                             <p class="text-gray-800 italic">\${session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'}</p>
                         </div>
                         
+                        <!-- ===== 대화창 (추가 질문) ===== -->
+                        <div class="bg-white p-6 rounded-xl border-2 border-purple-200">
+                            <h4 class="font-bold text-purple-900 mb-4 text-xl flex items-center">
+                                <i class="fas fa-comment-dots mr-2"></i>추가 질문하기
+                                <span class="ml-2 text-sm text-gray-500 font-normal">(궁금한 점을 자유롭게 물어보세요)</span>
+                            </h4>
+                            
+                            <!-- 대화 메시지 목록 -->
+                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg">
+                                \${session.conversationMessages && session.conversationMessages.length > 0 ? 
+                                    session.conversationMessages.map(msg => \`
+                                        <div class="\${msg.sender === 'planner' ? 'text-right' : 'text-left'}">
+                                            <div class="inline-block max-w-[80%] p-3 rounded-lg \${msg.sender === 'planner' ? 'bg-purple-500 text-white' : 'bg-white border border-gray-200 text-gray-800'}">
+                                                <p class="text-sm">\${msg.message}</p>
+                                                <p class="text-xs mt-1 opacity-70">\${new Date(msg.timestamp).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                            </div>
+                                        </div>
+                                    \`).join('') 
+                                : '<p class="text-gray-500 text-center py-4">아직 추가 질문이 없습니다. 궁금한 점을 물어보세요!</p>'}
+                            </div>
+                            
+                            <!-- 메시지 입력 폼 -->
+                            <form id="conversationForm-\${session.id}" class="flex gap-2" onsubmit="sendMessage(event, \${session.id})">
+                                <input type="text" id="messageInput-\${session.id}" 
+                                    placeholder="추가로 궁금한 점을 입력하세요..." 
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    required>
+                                <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 flex items-center gap-2">
+                                    <i class="fas fa-paper-plane"></i>
+                                    전송
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- ===== 효과성 평가 (기존) ===== -->
                         \${!session.effectivenessRating ? \`
                             <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
-                                <h4 class="font-bold text-gray-800 mb-2">피드백 남기기</h4>
+                                <h4 class="font-bold text-gray-800 mb-2">
+                                    <i class="fas fa-star text-yellow-500 mr-2"></i>코칭 효과성 평가
+                                </h4>
                                 <form id="feedbackForm" class="space-y-3">
                                     <div>
                                         <label class="block text-sm font-semibold mb-1">효과성 평가</label>
@@ -308,21 +345,24 @@ export const plannerPageHTML = `
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold mb-1">후기</label>
-                                        <textarea id="feedback" rows="2" class="w-full px-3 py-2 border rounded-lg"></textarea>
+                                        <label class="block text-sm font-semibold mb-1">후기 (선택)</label>
+                                        <textarea id="feedback" rows="2" class="w-full px-3 py-2 border rounded-lg" 
+                                            placeholder="코칭이 도움이 되었는지, 개선할 점이 있다면 알려주세요."></textarea>
                                     </div>
                                     <button type="submit" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90">
-                                        제출하기
+                                        <i class="fas fa-check mr-2"></i>평가 제출
                                     </button>
                                 </form>
                             </div>
                         \` : \`
                             <div class="bg-green-100 p-4 rounded-lg">
-                                <h4 class="font-bold text-green-800 mb-2">내 피드백</h4>
+                                <h4 class="font-bold text-green-800 mb-2">
+                                    <i class="fas fa-check-circle mr-2"></i>내 평가
+                                </h4>
                                 <div class="flex items-center text-yellow-500 mb-2">
                                     \${' <i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
                                 </div>
-                                <p class="text-gray-700">\${session.plannerFeedback || '없음'}</p>
+                                <p class="text-gray-700">\${session.plannerFeedback || '(후기 없음)'}</p>
                             </div>
                         \`}
                     </div>
@@ -354,6 +394,75 @@ export const plannerPageHTML = `
         
         function closeModal() {
             document.getElementById('sessionModal').classList.add('hidden')
+        }
+        
+        async function sendMessage(event, sessionId) {
+            event.preventDefault()
+            
+            const messageInput = document.getElementById(\`messageInput-\${sessionId}\`)
+            const message = messageInput.value.trim()
+            
+            if (!message) return
+            
+            const messagesContainer = document.getElementById(\`conversationMessages-\${sessionId}\`)
+            
+            // 사용자 메시지 추가 (UI)
+            const userMessageHtml = \`
+                <div class="text-right">
+                    <div class="inline-block max-w-[80%] p-3 rounded-lg bg-purple-500 text-white">
+                        <p class="text-sm">\${message}</p>
+                        <p class="text-xs mt-1 opacity-70">\${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
+                    </div>
+                </div>
+            \`
+            
+            // 빈 메시지 제거
+            if (messagesContainer.querySelector('.text-gray-500')) {
+                messagesContainer.innerHTML = ''
+            }
+            
+            messagesContainer.insertAdjacentHTML('beforeend', userMessageHtml)
+            messageInput.value = ''
+            
+            // AI 응답 대기 표시
+            const loadingHtml = \`
+                <div class="text-left" id="loading-\${sessionId}">
+                    <div class="inline-block max-w-[80%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
+                        <p class="text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>AI가 답변 중입니다...</p>
+                    </div>
+                </div>
+            \`
+            messagesContainer.insertAdjacentHTML('beforeend', loadingHtml)
+            messagesContainer.scrollTop = messagesContainer.scrollHeight
+            
+            try {
+                // API 호출
+                const res = await axios.post(\`/api/coaching-sessions/\${sessionId}/conversation\`, {
+                    message
+                })
+                
+                // 로딩 제거
+                document.getElementById(\`loading-\${sessionId}\`)?.remove()
+                
+                // AI 응답 추가
+                const aiMessage = res.data.aiResponse
+                const aiMessageHtml = \`
+                    <div class="text-left">
+                        <div class="inline-block max-w-[80%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
+                            <p class="text-sm whitespace-pre-wrap">\${aiMessage}</p>
+                            <p class="text-xs mt-1 opacity-70">\${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
+                        </div>
+                    </div>
+                \`
+                messagesContainer.insertAdjacentHTML('beforeend', aiMessageHtml)
+                messagesContainer.scrollTop = messagesContainer.scrollHeight
+                
+            } catch (error) {
+                // 로딩 제거
+                document.getElementById(\`loading-\${sessionId}\`)?.remove()
+                
+                alert('오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
+            }
         }
         
         function logout() {
