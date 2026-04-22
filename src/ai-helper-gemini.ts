@@ -95,8 +95,8 @@ ${tacitKnowledgeBase}
   "category": "세일즈프로세스|상품내용|약관조항|보험업법등법률|의료정보|사례검토|동기부여|통계자료|보험비즈니스|기타",
   "keyPoints": "핵심 포인트 3-5개 bullet points (\\n구분)",
   "coachingPoint": "카테고리별 핵심 코칭 포인트 (200-400자)",
-  "coachingEvidence": "카테고리별 구체적 근거:\\n- 약관: 보험사+상품명+약관 제X조 X항\\n- 법률: 법령명+조항\\n- 의료: KCD-10 코드+질병명+치료법\\n- 통계: 출처+연도+구체적 수치\\n(500-1000자)",
-  "dialogue": "심리학 기반 공감 대화 포함, 6-8번 대화 주고받기:\\n\\n설계사: \\"(공감)...\\"\\n고객: \\"(반응)...\\"\\n설계사: \\"(심리적 안정)...\\"\\n고객: \\"(신뢰)...\\"\\n설계사: \\"(논리적 근거)...\\"\\n고객: \\"(이해)...\\"\\n설계사: \\"(해결책)...\\"\\n고객: \\"(긍정적 반응)...\\"\\n\\n(1000-1500자)",
+  "coachingEvidence": "카테고리별 구체적 근거 (300-500자):\\n- 약관: 보험사+상품명+약관 제X조\\n- 법률: 법령명+조항\\n- 의료: KCD-10 코드+질병명+치료법\\n- 통계: 출처+연도+수치",
+  "dialogue": "실전 대화 스크립트 (4-5번 주고받기, 600-800자):\\n\\n설계사: \\"...\\"\\n고객: \\"...\\"\\n설계사: \\"...\\"\\n고객: \\"...\\"\\n...",
   "learningNeeds": "추가 학습 필요 내용 (상품지식, 약관, 법률, 화법)",
   "actionGuidelines": "구체적 행동지침 3가지:\\n\\n[방법A - 명확한 제목]:\\n구체적 설명 (100-200자)\\n\\n[방법B - 명확한 제목]:\\n구체적 설명 (100-200자)\\n\\n[방법C - 명확한 제목]:\\n구체적 설명 (100-200자)",
   "references": [
@@ -163,45 +163,61 @@ ${context}
 
 JSON 형식으로 응답하세요.`
 
-  try {
-    // Cloudflare Workers 환경에서 REST API 직접 호출
-    // gemini-2.5-flash 사용 (최신 모델, 1M tokens 입력, 65K 출력)
-    // gemini-2.0-flash는 무료 할당량 소진됨
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`
-    
-    // JSON 응답을 받기 위해 프롬프트에 명시
-    const requestBody = {
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${systemPrompt}\n\n${userPrompt}\n\n**IMPORTANT: 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.**` }]
+  // 503 에러 재시도 로직
+  let lastError: Error | null = null
+  const maxRetries = 2
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Cloudflare Workers 환경에서 REST API 직접 호출
+      // gemini-2.5-flash 사용 (최신 모델, 1M tokens 입력, 65K 출력)
+      const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+      
+      // JSON 응답을 받기 위해 프롬프트에 명시
+      const requestBody = {
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\n${userPrompt}\n\n**IMPORTANT: 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.**` }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4000, // 8000 → 4000 (JSON 파싱 안정성 향상)
+          topP: 0.9,
+          topK: 40,
         }
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8000,
       }
-    }
-    
-    console.log('[Gemini AI] REST API 호출 중...')
-    console.log('[Gemini AI] API URL:', apiUrl.substring(0, 80) + '...')
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    })
-    
-    console.log('[Gemini AI] HTTP status:', response.status)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[Gemini AI] Error response:', errorText.substring(0, 500))
-      throw new Error(`Gemini API error (${response.status}): ${errorText}`)
-    }
-    
-    const result = await response.json() as any
+      
+      console.log(`[Gemini AI] REST API 호출 중... (시도 ${attempt}/${maxRetries})`)
+      console.log('[Gemini AI] API URL:', apiUrl.substring(0, 80) + '...')
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      })
+      
+      console.log('[Gemini AI] HTTP status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[Gemini AI] Error response:', errorText.substring(0, 500))
+        
+        // 503 에러이고 재시도 가능하면 다시 시도
+        if (response.status === 503 && attempt < maxRetries) {
+          console.log(`[Gemini AI] ⚠️ 503 에러 - ${attempt + 1}번째 시도 대기 중... (3초 후)`)
+          await new Promise(resolve => setTimeout(resolve, 3000))
+          lastError = new Error(`Gemini API 503 error (attempt ${attempt})`)
+          continue
+        }
+        
+        throw new Error(`Gemini API error (${response.status}): ${errorText}`)
+      }
+      
+      // 성공한 경우 파싱 진행
+      const result = await response.json() as any
     console.log('[Gemini AI] Result structure:', JSON.stringify({
       hasCandidates: !!result.candidates,
       candidatesLength: result.candidates?.length,
@@ -229,7 +245,128 @@ JSON 형식으로 응답하세요.`
     console.log('[Gemini AI] After cleanup (first 300):', jsonText.substring(0, 300))
     console.log('[Gemini AI] After cleanup (last 100):', jsonText.substring(Math.max(0, jsonText.length - 100)))
     
-    const parsed = JSON.parse(jsonText)
+    // JSON 완결성 검증 및 자동 복구 (간소화)
+    const openBraces = (jsonText.match(/{/g) || []).length
+    const closeBraces = (jsonText.match(/}/g) || []).length
+    const openBrackets = (jsonText.match(/\[/g) || []).length
+    const closeBrackets = (jsonText.match(/]/g) || []).length
+    
+    console.log('[Gemini AI] 괄호 균형 검사:', { openBraces, closeBraces, openBrackets, closeBrackets })
+    
+    // 불완전한 JSON이면 자동 복구
+    if (openBraces !== closeBraces || openBrackets !== closeBrackets) {
+      console.log('[Gemini AI] ⚠️ 불완전한 JSON 감지 - 자동 복구 시작')
+      
+      // 간단한 복구: 마지막 불완전한 줄 제거 + 닫는 괄호 추가
+      const lines = jsonText.split('\n')
+      
+      // 마지막 줄이 완전한지 확인
+      let lastValidIndex = lines.length - 1
+      while (lastValidIndex > 0) {
+        const line = lines[lastValidIndex].trim()
+        // 빈 줄, 완전하지 않은 줄은 제거
+        if (line === '' || (!line.endsWith(',') && !line.endsWith('{') && !line.endsWith('[') && !line.endsWith('}') && !line.endsWith(']') && !line.match(/^"[^"]+"\s*:\s*"[^"]*"$/))) {
+          console.log('[Gemini AI] 불완전한 줄 제거:', line.substring(0, 100))
+          lastValidIndex--
+        } else {
+          break
+        }
+      }
+      
+      // 마지막 유효한 줄까지만 유지
+      jsonText = lines.slice(0, lastValidIndex + 1).join('\n')
+      
+      // 마지막 줄에 쉼표가 있으면 제거
+      jsonText = jsonText.replace(/,\s*$/, '')
+      
+      // 필요한 닫는 괄호 추가
+      const finalOpenBrackets = (jsonText.match(/\[/g) || []).length
+      const finalCloseBrackets = (jsonText.match(/]/g) || []).length
+      const finalOpenBraces = (jsonText.match(/{/g) || []).length
+      const finalCloseBraces = (jsonText.match(/}/g) || []).length
+      
+      for (let i = 0; i < finalOpenBrackets - finalCloseBrackets; i++) {
+        jsonText += '\n]'
+        console.log('[Gemini AI] 닫는 대괄호 ] 추가')
+      }
+      for (let i = 0; i < finalOpenBraces - finalCloseBraces; i++) {
+        jsonText += '\n}'
+        console.log('[Gemini AI] 닫는 중괄호 } 추가')
+      }
+      
+      console.log('[Gemini AI] ✅ JSON 자동 복구 완료')
+      console.log('[Gemini AI] 복구된 JSON (last 300):', jsonText.substring(Math.max(0, jsonText.length - 300)))
+    }
+    
+    // JSON 파싱 시도 (에러 복구 로직 포함)
+    let parsed: any
+    try {
+      parsed = JSON.parse(jsonText)
+    } catch (parseError: any) {
+      console.error('[Gemini AI] JSON 파싱 1차 실패:', parseError.message)
+      console.error('[Gemini AI] 파싱 실패 위치:', parseError.message.match(/position (\d+)/)?.[1])
+      
+      // 복구 시도 1: 이스케이프 처리되지 않은 따옴표 수정
+      try {
+        console.log('[Gemini AI] 복구 시도 1: 이스케이프 처리')
+        // 필드명을 제외한 값 내부의 따옴표를 이스케이프
+        let fixedText = jsonText
+        
+        // 복구 시도 2: 불완전한 JSON 종료 처리
+        const lines = fixedText.split('\n')
+        if (!fixedText.trim().endsWith('}') && !fixedText.trim().endsWith(']')) {
+          console.log('[Gemini AI] 복구 시도 2: 불완전한 마지막 줄 제거')
+          
+          // 마지막 불완전한 줄 찾기
+          let lastValidIndex = lines.length - 1
+          while (lastValidIndex >= 0) {
+            const line = lines[lastValidIndex].trim()
+            // 완전한 필드를 찾으면 중단
+            if (line.endsWith(',') || line.endsWith('}') || line.endsWith(']')) {
+              break
+            }
+            lastValidIndex--
+          }
+          
+          fixedText = lines.slice(0, lastValidIndex + 1).join('\n')
+          
+          // 닫는 중괄호 추가
+          const openBraces = (fixedText.match(/{/g) || []).length
+          const closeBraces = (fixedText.match(/}/g) || []).length
+          const openBrackets = (fixedText.match(/\[/g) || []).length
+          const closeBrackets = (fixedText.match(/]/g) || []).length
+          
+          console.log('[Gemini AI] 괄호 균형:', { openBraces, closeBraces, openBrackets, closeBrackets })
+          
+          // 필요한 만큼 닫는 괄호 추가
+          for (let i = 0; i < openBrackets - closeBrackets; i++) {
+            fixedText += '\n]'
+          }
+          for (let i = 0; i < openBraces - closeBraces; i++) {
+            fixedText += '\n}'
+          }
+        }
+        
+        parsed = JSON.parse(fixedText)
+        console.log('[Gemini AI] ✅ JSON 복구 성공')
+      } catch (retryError: any) {
+        console.error('[Gemini AI] JSON 복구 실패:', retryError.message)
+        
+        // 복구 시도 3: 기본 구조만 반환
+        console.log('[Gemini AI] 복구 시도 3: 기본 구조 반환')
+        parsed = {
+          analyzedQuestion: '파싱 실패 - 원본 응답 확인 필요',
+          category: '기타',
+          keyPoints: '응답을 파싱할 수 없습니다.',
+          coachingPoint: '기술적 문제로 코칭을 생성할 수 없습니다. 다시 시도해주세요.',
+          coachingEvidence: `원본 응답 (처음 500자):\n${jsonText.substring(0, 500)}`,
+          dialogue: '대화 스크립트 생성 실패',
+          learningNeeds: '다시 시도 필요',
+          actionGuidelines: '1. 잠시 후 다시 시도\n2. 질문을 더 간단하게 수정\n3. 관리자에게 문의',
+          references: []
+        }
+      }
+    }
     
     // dialogue 문자열 변환
     let dialogueText = parsed.dialogue || '대화 시나리오 생성 중...'
@@ -243,36 +380,48 @@ JSON 형식으로 응답하세요.`
       keyPointsText = keyPointsText.join('\n')
     }
     
-    return {
-      // 새 구조 (3단계 분석 시스템)
-      analyzedQuestion: parsed.analyzedQuestion || '질문 분석 중...',
-      category: parsed.category || '기타',
-      keyPoints: keyPointsText,
+      // 성공 시 결과 반환
+      return {
+        // 새 구조 (3단계 분석 시스템)
+        analyzedQuestion: parsed.analyzedQuestion || '질문 분석 중...',
+        category: parsed.category || '기타',
+        keyPoints: keyPointsText,
+        
+        coachingPoint: parsed.coachingPoint || '코칭 포인트 생성 중...',
+        coachingEvidence: parsed.coachingEvidence || '근거 분석 중...',
+        dialogue: dialogueText,
+        learningNeeds: parsed.learningNeeds || '추가 학습 없음',
+        actionGuidelines: parsed.actionGuidelines || '행동지침 생성 중...',
+        
+        references: parsed.references || [],
+        
+        // 기존 필드 (하위 호환)
+        aiAnalysis: parsed.aiAnalysis || parsed.analyzedQuestion,
+        salesProcess: parsed.salesProcess,
+        currentStage: parsed.currentStage,
+        productSellingPoint: parsed.productSellingPoint,
+        
+        coachingAdvice: parsed.coachingAdvice || parsed.coachingPoint,
+        dialogueScript: parsed.dialogueScript || dialogueText,
+        requiredKnowledge: parsed.requiredKnowledge || parsed.learningNeeds,
+        managerRequest: parsed.managerRequest,
+        
+        recommendedApproach: parsed.recommendedApproach || parsed.actionGuidelines,
+        tacitKnowledge: '[Gemini AI - 30년 노하우 기반 코칭]',
+      }
+    } catch (attemptError) {
+      console.error(`[Gemini AI] 시도 ${attempt} 실패:`, attemptError)
+      lastError = attemptError as Error
       
-      coachingPoint: parsed.coachingPoint || '코칭 포인트 생성 중...',
-      coachingEvidence: parsed.coachingEvidence || '근거 분석 중...',
-      dialogue: dialogueText,
-      learningNeeds: parsed.learningNeeds || '추가 학습 없음',
-      actionGuidelines: parsed.actionGuidelines || '행동지침 생성 중...',
-      
-      references: parsed.references || [],
-      
-      // 기존 필드 (하위 호환)
-      aiAnalysis: parsed.aiAnalysis || parsed.analyzedQuestion,
-      salesProcess: parsed.salesProcess,
-      currentStage: parsed.currentStage,
-      productSellingPoint: parsed.productSellingPoint,
-      
-      coachingAdvice: parsed.coachingAdvice || parsed.coachingPoint,
-      dialogueScript: parsed.dialogueScript || dialogueText,
-      requiredKnowledge: parsed.requiredKnowledge || parsed.learningNeeds,
-      managerRequest: parsed.managerRequest,
-      
-      recommendedApproach: parsed.recommendedApproach || parsed.actionGuidelines,
-      tacitKnowledge: '[Gemini AI - 30년 노하우 기반 코칭]',
+      // 마지막 시도가 아니면 재시도
+      if (attempt < maxRetries) {
+        console.log(`[Gemini AI] ⚠️ ${attempt + 1}번째 시도 대기 중... (3초 후)`)
+        await new Promise(resolve => setTimeout(resolve, 3000))
+      }
     }
-  } catch (error) {
-    console.error('[Gemini AI] Error:', error)
-    throw error
   }
+  
+  // 모든 시도 실패
+  console.error('[Gemini AI] 모든 재시도 실패')
+  throw lastError || new Error('Gemini API 호출 실패')
 }
