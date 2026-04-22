@@ -643,8 +643,10 @@ app.get('/api/director/sessions', (c) => {
 
 // Director - 피드백 작성
 app.post('/api/director/feedback', async (c) => {
+  const { env } = c
   const { sessionId, directorFeedback, director30YearsKnowledge, directorRating, useForLearning } = await c.req.json()
   
+  // 메모리 배열 업데이트
   const session = coachingSessions.find(s => s.id === sessionId)
   if (!session) {
     return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
@@ -655,6 +657,31 @@ app.post('/api/director/feedback', async (c) => {
   session.directorRating = directorRating
   session.isValidated = true
   session.useForLearning = useForLearning || false
+  
+  // D1 데이터베이스에 저장
+  try {
+    await env.DB.prepare(`
+      UPDATE coaching_sessions 
+      SET 
+        director_feedback = ?,
+        director_30years_knowledge = ?,
+        director_rating = ?,
+        is_validated = 1,
+        use_for_learning = ?
+      WHERE id = ?
+    `).bind(
+      directorFeedback,
+      director30YearsKnowledge || null,
+      directorRating,
+      useForLearning ? 1 : 0,
+      sessionId
+    ).run()
+    
+    console.log('[DB] Director 피드백 저장 성공:', sessionId)
+  } catch (error) {
+    console.error('[DB] Director 피드백 저장 실패:', error)
+    // DB 저장 실패해도 메모리 배열은 업데이트되었으므로 일단 성공 응답
+  }
   
   return c.json({ success: true, session })
 })

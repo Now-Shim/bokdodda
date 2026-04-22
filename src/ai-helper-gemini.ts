@@ -171,6 +171,7 @@ JSON 형식으로 응답하세요.`
     try {
       // Cloudflare Workers 환경에서 REST API 직접 호출
       // gemini-2.5-flash 사용 (최신 모델, 1M tokens 입력, 65K 출력)
+      // 결제 활성화 후 안정적으로 작동
       const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`
       
       // JSON 응답을 받기 위해 프롬프트에 명시
@@ -205,11 +206,11 @@ JSON 형식으로 응답하세요.`
         const errorText = await response.text()
         console.error('[Gemini AI] Error response:', errorText.substring(0, 500))
         
-        // 503 에러이고 재시도 가능하면 다시 시도
-        if (response.status === 503 && attempt < maxRetries) {
-          console.log(`[Gemini AI] ⚠️ 503 에러 - ${attempt + 1}번째 시도 대기 중... (3초 후)`)
+        // 503/429 에러이고 재시도 가능하면 다시 시도
+        if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+          console.log(`[Gemini AI] ⚠️ ${response.status} 에러 - ${attempt + 1}번째 시도 대기 중... (3초 후)`)
           await new Promise(resolve => setTimeout(resolve, 3000))
-          lastError = new Error(`Gemini API 503 error (attempt ${attempt})`)
+          lastError = new Error(`Gemini API ${response.status} error (attempt ${attempt})`)
           continue
         }
         
