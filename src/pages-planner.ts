@@ -71,7 +71,10 @@ export const plannerPageHTML = `
                     class="gradient-bg text-white font-bold px-6 py-3 rounded-lg hover:opacity-90">
                     <i class="fas fa-paper-plane mr-2"></i>AI 코칭 받기
                 </button>
-                <span id="loading" class="ml-4 hidden"><div class="loading"></div> AI가 분석 중입니다...</span>
+                <span id="loading" class="ml-4 hidden">
+                    <div class="loading"></div> 
+                    <span id="loading-text">AI가 분석 중입니다... (약 30초 소요)</span>
+                </span>
             </form>
         </div>
         
@@ -220,6 +223,8 @@ export const plannerPageHTML = `
                     plannerId: user.id,
                     context,
                     situationType
+                }, {
+                    timeout: 60000 // 60초 타임아웃 (AI 응답 대기)
                 })
                 
                 if (res.data.success) {
