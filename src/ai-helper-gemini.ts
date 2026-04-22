@@ -229,10 +229,38 @@ JSON 형식으로 응답하세요.`
       candidatesLength: result.candidates?.length,
       hasContent: !!result.candidates?.[0]?.content,
       hasParts: !!result.candidates?.[0]?.content?.parts,
-      partsLength: result.candidates?.[0]?.content?.parts?.length
+      partsLength: result.candidates?.[0]?.content?.parts?.length,
+      finishReason: result.candidates?.[0]?.finishReason
     }))
     
     let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+    
+    // finishReason 확인
+    const finishReason = result.candidates?.[0]?.finishReason
+    if (finishReason && finishReason !== 'STOP') {
+      console.log(`[Gemini AI] ⚠️ 비정상 종료: finishReason = ${finishReason}`)
+      if (finishReason === 'MAX_TOKENS') {
+        console.log('[Gemini AI] ⚠️ 응답이 maxOutputTokens 제한으로 잘렸습니다. maxOutputTokens를 늘려주세요.')
+      } else if (finishReason === 'SAFETY') {
+        console.log('[Gemini AI] ⚠️ 안전 필터에 의해 응답이 차단되었습니다.')
+      }
+      
+      // 재시도 가능하면 재시도
+      if (attempt < maxRetries) {
+        console.log(`[Gemini AI] 🔄 재시도 (${attempt + 1}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        lastError = new Error(`Gemini API abnormal finish: ${finishReason}`)
+        continue
+      }
+    }
+    
+    // 응답 길이가 너무 짧으면 재시도 (불완전한 응답 가능성)
+    if (jsonText.length < 1000 && attempt < maxRetries) {
+      console.log(`[Gemini AI] ⚠️ 응답이 너무 짧습니다 (${jsonText.length}자). 재시도합니다.`)
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      lastError = new Error(`Response too short: ${jsonText.length} chars`)
+      continue
+    }
     
     console.log('[Gemini AI] Raw response (first 500 chars):', jsonText.substring(0, 500))
     console.log('[Gemini AI] Raw response (last 200 chars):', jsonText.substring(Math.max(0, jsonText.length - 200)))
