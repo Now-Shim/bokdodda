@@ -397,7 +397,7 @@ export const plannerPageHTML = `
                             </h4>
                             
                             <!-- 대화 메시지 목록 -->
-                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[800px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
+                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[1000px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
                                 \${session.conversationMessages && session.conversationMessages.length > 0 ? 
                                     session.conversationMessages.map(msg => \`
                                         <div class="\${msg.sender === 'planner' ? 'text-right' : 'text-left'}">
@@ -536,7 +536,7 @@ export const plannerPageHTML = `
             // 사용자 메시지 추가 (UI)
             const userMessageHtml = \`
                 <div class="text-right">
-                    <div class="inline-block max-w-[80%] p-3 rounded-lg bg-purple-500 text-white">
+                    <div class="inline-block max-w-[90%] p-3 rounded-lg bg-purple-500 text-white">
                         <p class="text-sm">\${message}</p>
                         <p class="text-xs mt-1 opacity-70">\${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
                     </div>
@@ -554,7 +554,7 @@ export const plannerPageHTML = `
             // AI 응답 대기 표시
             const loadingHtml = \`
                 <div class="text-left" id="loading-\${sessionId}">
-                    <div class="inline-block max-w-[80%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
+                    <div class="inline-block max-w-[90%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
                         <p class="text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>AI가 답변 중입니다...</p>
                     </div>
                 </div>
@@ -575,7 +575,7 @@ export const plannerPageHTML = `
                 const aiMessage = res.data.aiResponse
                 const aiMessageHtml = \`
                     <div class="text-left">
-                        <div class="inline-block max-w-[80%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
+                        <div class="inline-block max-w-[90%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
                             <p class="text-sm whitespace-pre-wrap">\${aiMessage}</p>
                             <p class="text-xs mt-1 opacity-70">\${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
                         </div>
