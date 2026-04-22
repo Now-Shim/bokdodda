@@ -397,7 +397,7 @@ export const plannerPageHTML = `
                             </h4>
                             
                             <!-- 대화 메시지 목록 -->
-                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[600px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
+                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[800px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
                                 \${session.conversationMessages && session.conversationMessages.length > 0 ? 
                                     session.conversationMessages.map(msg => \`
                                         <div class="\${msg.sender === 'planner' ? 'text-right' : 'text-left'}">
