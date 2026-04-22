@@ -213,6 +213,8 @@ JSON 형식으로 응답하세요.`
     let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
     
     console.log('[Gemini AI] Raw response (first 500 chars):', jsonText.substring(0, 500))
+    console.log('[Gemini AI] Raw response (last 200 chars):', jsonText.substring(Math.max(0, jsonText.length - 200)))
+    console.log('[Gemini AI] Total length:', jsonText.length)
     
     // Gemini가 코드 블록(```json ... ```)으로 감싸서 응답하는 경우 제거
     jsonText = jsonText.trim()
@@ -223,6 +225,9 @@ JSON 형식으로 응답하세요.`
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
       console.log('[Gemini AI] Removed markdown code block wrapper')
     }
+    
+    console.log('[Gemini AI] After cleanup (first 300):', jsonText.substring(0, 300))
+    console.log('[Gemini AI] After cleanup (last 100):', jsonText.substring(Math.max(0, jsonText.length - 100)))
     
     const parsed = JSON.parse(jsonText)
     
