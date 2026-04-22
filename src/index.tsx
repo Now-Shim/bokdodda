@@ -627,18 +627,80 @@ app.put('/api/director/knowledge/:id', async (c) => {
 })
 
 // Director - 전체 세션 목록 (모든 필드 포함)
-app.get('/api/director/sessions', (c) => {
-  const sessions = coachingSessions.map(s => {
-    const planner = users.find(u => u.id === s.plannerId)
-    const profile = plannerProfiles.find(p => p.userId === s.plannerId)
-    return { ...s, plannerName: planner?.name, plannerProfile: profile }
-  })
+app.get('/api/director/sessions', async (c) => {
+  const { env } = c
   
-  const planners = users
-    .filter(u => u.role === 'planner')
-    .map(u => ({ id: u.id, name: u.name }))
-  
-  return c.json({ sessions, planners })
+  try {
+    // D1 데이터베이스에서 모든 세션 조회
+    const result = await env.DB.prepare(`
+      SELECT * FROM coaching_sessions ORDER BY session_date DESC
+    `).all()
+    
+    // D1 결과를 메모리 형식으로 변환
+    const dbSessions = result.results.map((row: any) => ({
+      id: row.id,
+      plannerId: row.planner_id,
+      sessionDate: row.session_date,
+      context: row.context,
+      situationType: row.situation_type,
+      analyzedQuestion: row.analyzed_question,
+      category: row.category,
+      keyPoints: row.key_points,
+      coachingPoint: row.coaching_point,
+      coachingEvidence: row.coaching_evidence,
+      dialogue: row.dialogue,
+      learningNeeds: row.learning_needs,
+      actionGuidelines: row.action_guidelines,
+      references: row.reference_sources ? JSON.parse(row.reference_sources) : [],
+      aiAnalysis: row.ai_analysis,
+      coachingAdvice: row.coaching_advice,
+      recommendedApproach: row.recommended_approach,
+      tacitKnowledge: row.tacit_knowledge_applied,
+      isShared: row.is_shared === 1,
+      isValidated: row.is_validated === 1,
+      useForLearning: row.use_for_learning === 1,
+      plannerFeedback: row.planner_feedback,
+      effectivenessRating: row.effectiveness_rating,
+      directorFeedback: row.director_feedback,
+      director30YearsKnowledge: row.director_30years_knowledge,
+      directorRating: row.director_rating,
+      managerNote: row.manager_note,
+    }))
+    
+    // 메모리 세션과 D1 세션 병합 (중복 제거)
+    const allSessions = [...coachingSessions]
+    dbSessions.forEach(dbSession => {
+      if (!allSessions.find(s => s.id === dbSession.id)) {
+        allSessions.push(dbSession)
+      }
+    })
+    
+    const sessions = allSessions.map(s => {
+      const planner = users.find(u => u.id === s.plannerId)
+      const profile = plannerProfiles.find(p => p.userId === s.plannerId)
+      return { ...s, plannerName: planner?.name, plannerProfile: profile }
+    })
+    
+    const planners = users
+      .filter(u => u.role === 'planner')
+      .map(u => ({ id: u.id, name: u.name }))
+    
+    return c.json({ sessions, planners })
+  } catch (error) {
+    console.error('[Director Sessions] D1 조회 실패:', error)
+    // 에러 발생 시 메모리 세션만 반환
+    const sessions = coachingSessions.map(s => {
+      const planner = users.find(u => u.id === s.plannerId)
+      const profile = plannerProfiles.find(p => p.userId === s.plannerId)
+      return { ...s, plannerName: planner?.name, plannerProfile: profile }
+    })
+    
+    const planners = users
+      .filter(u => u.role === 'planner')
+      .map(u => ({ id: u.id, name: u.name }))
+    
+    return c.json({ sessions, planners })
+  }
 })
 
 // Director - 피드백 작성

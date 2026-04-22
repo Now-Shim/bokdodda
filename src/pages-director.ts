@@ -1548,8 +1548,40 @@ export function renderDirectorPage(c: Context) {
             window.location.href = '/'
         }
         
+        // 세션 목록 자동 갱신 (30초마다)
+        let autoRefreshInterval = null
+        
+        function startAutoRefresh() {
+            // 기존 인터벌 제거
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval)
+            }
+            
+            // 30초마다 세션 목록 갱신
+            autoRefreshInterval = setInterval(async () => {
+                console.log('[Auto Refresh] 세션 목록 갱신 중...')
+                await loadSessions()
+                console.log('[Auto Refresh] 세션 목록 갱신 완료')
+            }, 30000) // 30초
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval)
+                autoRefreshInterval = null
+            }
+        }
+        
         // 페이지 로드 시 초기화
-        window.onload = init
+        window.onload = () => {
+            init()
+            startAutoRefresh()
+        }
+        
+        // 페이지 언로드 시 자동 갱신 중지
+        window.onbeforeunload = () => {
+            stopAutoRefresh()
+        }
     </script>
 </body>
 </html>
