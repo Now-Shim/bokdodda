@@ -238,8 +238,8 @@ app.post('/api/coaching-sessions', async (c) => {
       }
       
       console.log('[DB] 저장할 데이터:', JSON.stringify({
-        analyzedQuestion: typeof aiResponse.analyzedQuestion,
-        category: typeof aiResponse.category,
+        analyzedQuestion: (aiResponse.analyzedQuestion || '').substring(0, 100),
+        category: aiResponse.category,
         referencesJson: referencesJson.substring(0, 100)
       }))
       

@@ -381,40 +381,67 @@ JSON 형식으로 응답하세요.`
         tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     } catch (parseError) {
-      // JSON 파싱 실패 시 폴백
+      console.error('[AI Helper] ⚠️ JSON 파싱 실패, 폴백 응답 반환:', parseError)
+      // JSON 파싱 실패 시 폴백 - 모든 필수 필드 포함
       return {
+        // 새 구조 (3단계 분석 시스템) - 필수 필드
+        analyzedQuestion: `${plannerProfile.name} 설계사의 ${situationType} 관련 질문 분석 중입니다.`,
+        category: '기타',
+        keyPoints: responseText.substring(0, 300) || '핵심 포인트 분석 중...',
+        
+        coachingPoint: '코칭 포인트 생성 중입니다.',
+        coachingEvidence: '근거 자료를 분석 중입니다.',
+        dialogue: `설계사: "고객님, ${context.substring(0, 50)}... 관련하여 상담 도와드리겠습니다."\n고객: "네, 자세히 설명해주세요."`,
+        learningNeeds: '추가 학습 내용을 분석 중입니다.',
+        actionGuidelines: '1. 현재 상황 파악\n2. 고객 니즈 이해\n3. 맞춤 솔루션 제시',
+        
+        references: [],
+        
+        // 기존 필드 (하위 호환)
         aiAnalysis: '보험 세일즈 프로세스 분석 중입니다.',
         salesProcess: '분석 중',
         currentStage: '상황 파악 단계',
         productSellingPoint: responseText.substring(0, 200),
         
-        coachingAdvice: responseText.substring(0, 300),
-        dialogueScript: undefined,
+        coachingAdvice: responseText.substring(0, 300) || '조언을 생성 중입니다.',
+        dialogueScript: `설계사: "고객님, ${context.substring(0, 50)}... 관련하여 상담 도와드리겠습니다."\n고객: "네, 자세히 설명해주세요."`,
         requiredKnowledge: undefined,
         managerRequest: undefined,
         
         recommendedApproach: '1. 현재 상황 파악\n2. 고객 니즈 이해\n3. 맞춤 솔루션 제시',
-        references: [],
         tacitKnowledge: '[내부 참조용 - 30년 노하우 기반 코칭]',
       }
     }
   } catch (error) {
-    console.error('AI 코칭 생성 오류:', error)
+    console.error('[AI Helper] ⚠️ AI 코칭 생성 오류:', error)
     
-    // 폴백: 기본 응답
+    // 폴백: 기본 응답 - 모든 필수 필드 포함
     return {
+      // 새 구조 (3단계 분석 시스템) - 필수 필드
+      analyzedQuestion: `${plannerProfile.name} 설계사의 ${situationType} 상황 분석`,
+      category: '기타',
+      keyPoints: `${plannerProfile.personalityType} 성향 맞춤 코칭이 필요합니다.\n강점: ${plannerProfile.strengths}\n약점: ${plannerProfile.weaknesses}`,
+      
+      coachingPoint: '현재 AI 서비스에 일시적인 문제가 있습니다. 기본 분석을 제공합니다.',
+      coachingEvidence: '30년 노하우 기반 기본 코칭을 제공합니다.',
+      dialogue: `설계사: "고객님, 안녕하세요. ${context.substring(0, 50)}... 관련하여 도움을 드리고자 합니다."\n고객: "네, 궁금한 점이 많습니다."\n설계사: "천천히 하나씩 설명드리겠습니다."`,
+      learningNeeds: `${plannerProfile.specialization} 분야 심화 학습`,
+      actionGuidelines: '1. 고객과의 신뢰 관계 구축\n2. 니즈 파악 및 경청\n3. 맞춤형 솔루션 제안',
+      
+      references: [],
+      
+      // 기존 필드 (하위 호환)
       aiAnalysis: '현재 AI 서비스에 일시적인 문제가 있습니다. 기본 분석을 제공합니다.',
       salesProcess: undefined,
       currentStage: undefined,
       productSellingPoint: undefined,
       
       coachingAdvice: `${plannerProfile.personalityType} 성향의 ${plannerProfile.name}님께서는 ${plannerProfile.strengths}을 활용하시되, ${plannerProfile.weaknesses} 부분에 주의하시면 좋겠습니다.`,
-      dialogueScript: undefined,
+      dialogueScript: `설계사: "고객님, 안녕하세요. ${context.substring(0, 50)}... 관련하여 도움을 드리고자 합니다."\n고객: "네, 궁금한 점이 많습니다."\n설계사: "천천히 하나씩 설명드리겠습니다."`,
       requiredKnowledge: undefined,
       managerRequest: undefined,
       
       recommendedApproach: '1. 고객과의 신뢰 관계 구축\n2. 니즈 파악 및 경청\n3. 맞춤형 솔루션 제안',
-      references: [],
       tacitKnowledge: '[내부 참조용 - 30년 노하우 기반]',
     }
   }
