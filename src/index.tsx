@@ -643,47 +643,103 @@ app.get('/api/director/sessions', (c) => {
 
 // Director - 피드백 작성
 app.post('/api/director/feedback', async (c) => {
-  const { env } = c
-  const { sessionId, directorFeedback, director30YearsKnowledge, directorRating, useForLearning } = await c.req.json()
-  
-  // 메모리 배열 업데이트
-  const session = coachingSessions.find(s => s.id === sessionId)
-  if (!session) {
-    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
-  }
-  
-  session.directorFeedback = directorFeedback
-  session.director30YearsKnowledge = director30YearsKnowledge // 30년 노하우 저장
-  session.directorRating = directorRating
-  session.isValidated = true
-  session.useForLearning = useForLearning || false
-  
-  // D1 데이터베이스에 저장
   try {
-    await env.DB.prepare(`
-      UPDATE coaching_sessions 
-      SET 
-        director_feedback = ?,
-        director_30years_knowledge = ?,
-        director_rating = ?,
-        is_validated = 1,
-        use_for_learning = ?
-      WHERE id = ?
-    `).bind(
-      directorFeedback,
-      director30YearsKnowledge || null,
-      directorRating,
-      useForLearning ? 1 : 0,
-      sessionId
-    ).run()
+    console.log('[Director Feedback] API 호출됨')
+    const { env } = c
+    const body = await c.req.json()
+    console.log('[Director Feedback] 요청 데이터:', JSON.stringify(body).substring(0, 200))
     
-    console.log('[DB] Director 피드백 저장 성공:', sessionId)
+    const { sessionId, directorFeedback, director30YearsKnowledge, directorRating, useForLearning } = body
+    
+    // 메모리 배열에서 세션 찾기
+    let session = coachingSessions.find(s => s.id === sessionId)
+    
+    // 메모리에 없으면 D1 데이터베이스에서 조회
+    if (!session) {
+      console.log('[Director Feedback] 메모리에 세션 없음, D1에서 조회 중:', sessionId)
+      const result = await env.DB.prepare(`
+        SELECT * FROM coaching_sessions WHERE id = ?
+      `).bind(sessionId).first()
+      
+      if (!result) {
+        console.log('[Director Feedback] D1에도 세션 없음:', sessionId)
+        return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+      }
+      
+      // D1에서 가져온 데이터를 메모리에 추가
+      session = {
+        id: result.id,
+        plannerId: result.planner_id,
+        context: result.context,
+        situationType: result.situation_type,
+        analyzedQuestion: result.analyzed_question,
+        category: result.category,
+        keyPoints: result.key_points,
+        coachingPoint: result.coaching_point,
+        coachingEvidence: result.coaching_evidence,
+        dialogue: result.dialogue,
+        learningNeeds: result.learning_needs,
+        actionGuidelines: result.action_guidelines,
+        references: result.reference_sources ? JSON.parse(result.reference_sources) : [],
+        aiAnalysis: result.ai_analysis,
+        coachingAdvice: result.coaching_advice,
+        recommendedApproach: result.recommended_approach,
+        tacitKnowledge: result.tacit_knowledge_applied,
+        sessionDate: result.session_date,
+        isShared: result.is_shared === 1,
+        isValidated: result.is_validated === 1,
+        useForLearning: result.use_for_learning === 1,
+        plannerFeedback: result.planner_feedback,
+        effectivenessRating: result.effectiveness_rating,
+        directorFeedback: result.director_feedback,
+        director30YearsKnowledge: result.director_30years_knowledge,
+        directorRating: result.director_rating,
+        managerNote: result.manager_note,
+        conversationMessages: []
+      }
+      coachingSessions.push(session)
+      console.log('[Director Feedback] D1에서 세션 로드 완료:', session.id)
+    }
+    
+    console.log('[Director Feedback] 세션 찾음:', session.id)
+    
+    session.directorFeedback = directorFeedback
+    session.director30YearsKnowledge = director30YearsKnowledge // 30년 노하우 저장
+    session.directorRating = directorRating
+    session.isValidated = true
+    session.useForLearning = useForLearning || false
+    
+    // D1 데이터베이스에 저장
+    try {
+      await env.DB.prepare(`
+        UPDATE coaching_sessions 
+        SET 
+          director_feedback = ?,
+          director_30years_knowledge = ?,
+          director_rating = ?,
+          is_validated = 1,
+          use_for_learning = ?
+        WHERE id = ?
+      `).bind(
+        directorFeedback,
+        director30YearsKnowledge || null,
+        directorRating,
+        useForLearning ? 1 : 0,
+        sessionId
+      ).run()
+      
+      console.log('[DB] Director 피드백 저장 성공:', sessionId)
+    } catch (error) {
+      console.error('[DB] Director 피드백 저장 실패:', error)
+      // DB 저장 실패해도 메모리 배열은 업데이트되었으므로 일단 성공 응답
+    }
+    
+    console.log('[Director Feedback] 응답 반환:', { success: true, sessionId: session.id })
+    return c.json({ success: true, session })
   } catch (error) {
-    console.error('[DB] Director 피드백 저장 실패:', error)
-    // DB 저장 실패해도 메모리 배열은 업데이트되었으므로 일단 성공 응답
+    console.error('[Director Feedback] 오류 발생:', error)
+    return c.json({ error: '피드백 저장 중 오류가 발생했습니다.', details: String(error) }, 500)
   }
-  
-  return c.json({ success: true, session })
 })
 
 // Director - 통계 대시보드
