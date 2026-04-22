@@ -605,6 +605,12 @@ export const plannerPageHTML = `
         loadProfile()
         loadSessions()
         console.log('[DEBUG] Page setup complete')
+        
+        // 30초마다 자동 갱신 (새로운 코칭 세션 실시간 반영)
+        setInterval(() => {
+            console.log('[AUTO-REFRESH] Reloading sessions...')
+            loadSessions()
+        }, 30000)
     </script>
 </body>
 </html>
