@@ -165,9 +165,9 @@ JSON 형식으로 응답하세요.`
 
   try {
     // Cloudflare Workers 환경에서 REST API 직접 호출
-    // gemini-2.5-flash는 사용량 폭증으로 인해 503 에러 발생 가능성 있음
-    // gemini-2.0-flash로 안정적으로 운영 (1M tokens 입력, 8K 출력)
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    // gemini-2.5-flash 사용 (최신 모델, 1M tokens 입력, 65K 출력)
+    // gemini-2.0-flash는 무료 할당량 소진됨
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`
     
     // JSON 응답을 받기 위해 프롬프트에 명시
     const requestBody = {
@@ -210,9 +210,19 @@ JSON 형식으로 응답하세요.`
       partsLength: result.candidates?.[0]?.content?.parts?.length
     }))
     
-    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+    let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
     
     console.log('[Gemini AI] Raw response (first 500 chars):', jsonText.substring(0, 500))
+    
+    // Gemini가 코드 블록(```json ... ```)으로 감싸서 응답하는 경우 제거
+    jsonText = jsonText.trim()
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      console.log('[Gemini AI] Removed markdown code block wrapper')
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      console.log('[Gemini AI] Removed markdown code block wrapper')
+    }
     
     const parsed = JSON.parse(jsonText)
     
@@ -222,11 +232,17 @@ JSON 형식으로 응답하세요.`
       dialogueText = dialogueText.join('\n\n')
     }
     
+    // keyPoints 문자열 변환 (배열인 경우)
+    let keyPointsText = parsed.keyPoints || '핵심 포인트 분석 중...'
+    if (Array.isArray(keyPointsText)) {
+      keyPointsText = keyPointsText.join('\n')
+    }
+    
     return {
       // 새 구조 (3단계 분석 시스템)
       analyzedQuestion: parsed.analyzedQuestion || '질문 분석 중...',
       category: parsed.category || '기타',
-      keyPoints: parsed.keyPoints || '핵심 포인트 분석 중...',
+      keyPoints: keyPointsText,
       
       coachingPoint: parsed.coachingPoint || '코칭 포인트 생성 중...',
       coachingEvidence: parsed.coachingEvidence || '근거 분석 중...',

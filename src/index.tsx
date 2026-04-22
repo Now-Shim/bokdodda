@@ -223,6 +223,60 @@ app.post('/api/coaching-sessions', async (c) => {
     // 프로필 통계 업데이트
     profile.totalCoachingSessions++
     
+    // D1 데이터베이스에 저장
+    try {
+      // References 직렬화 (배열의 객체들을 JSON 문자열로 변환)
+      let referencesJson = '[]'
+      try {
+        if (Array.isArray(aiResponse.references)) {
+          referencesJson = JSON.stringify(aiResponse.references)
+        } else if (aiResponse.references) {
+          referencesJson = JSON.stringify([aiResponse.references])
+        }
+      } catch (e) {
+        console.error('[DB] references 직렬화 실패:', e)
+      }
+      
+      console.log('[DB] 저장할 데이터:', JSON.stringify({
+        analyzedQuestion: typeof aiResponse.analyzedQuestion,
+        category: typeof aiResponse.category,
+        referencesJson: referencesJson.substring(0, 100)
+      }))
+      
+      await c.env.DB.prepare(`
+        INSERT INTO coaching_sessions (
+          planner_id, session_date, context, situation_type,
+          analyzed_question, category, key_points,
+          coaching_point, coaching_evidence, dialogue, learning_needs, action_guidelines,
+          reference_sources,
+          ai_analysis, coaching_advice, recommended_approach, tacit_knowledge_applied,
+          is_shared, is_validated, use_for_learning
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
+      `).bind(
+        plannerId,
+        newSession.sessionDate,
+        context,
+        situationType,
+        aiResponse.analyzedQuestion || '',
+        aiResponse.category || '',
+        aiResponse.keyPoints || '',
+        aiResponse.coachingPoint || '',
+        aiResponse.coachingEvidence || '',
+        aiResponse.dialogue || '',
+        aiResponse.learningNeeds || '',
+        aiResponse.actionGuidelines || '',
+        referencesJson,  // 이미 JSON 문자열로 변환됨
+        aiResponse.aiAnalysis || '',
+        aiResponse.coachingAdvice || '',
+        aiResponse.recommendedApproach || '',
+        aiResponse.tacitKnowledge || ''
+      ).run()
+      console.log('[DB] 세션 저장 성공:', newSession.id)
+    } catch (dbError) {
+      console.error('[DB] 세션 저장 실패:', dbError)
+      // DB 저장 실패해도 메모리에는 있으므로 계속 진행
+    }
+    
     return c.json({ success: true, session: newSession })
   } catch (error) {
     console.error('AI 코칭 오류:', error)
