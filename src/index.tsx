@@ -338,11 +338,11 @@ app.post('/api/coaching-sessions/:id/conversation', async (c) => {
       .map(msg => `${msg.sender === 'planner' ? '설계사' : 'AI 코치'}: ${msg.message}`)
       .join('\n')
     
-    // OpenAI API를 직접 호출하여 대화형 답변 생성
-    const OPENROUTER_API_KEY = c.env.OPENROUTER_API_KEY || c.env.OPENAI_API_KEY
+    // Gemini API를 사용하여 대화형 답변 생성
+    const GEMINI_API_KEY = c.env.GEMINI_API_KEY
     
-    if (!OPENROUTER_API_KEY) {
-      throw new Error('OPENROUTER_API_KEY is not configured')
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
     }
     
     const conversationPrompt = `당신은 30년 경력의 보험 설계사 코치입니다.
@@ -373,31 +373,31 @@ ${message}
 
 답변만 작성하고, 다른 설명은 추가하지 마세요.`
 
-    const conversationResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const conversationResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://bukdotda.com',
-        'X-Title': '북돋다 - AI 코칭 대화'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o',
-        messages: [
-          { role: 'system', content: '당신은 30년 경력의 보험 설계사 전문 코치입니다. 간결하고 명확하게 답변하며, 필요시 구체적인 근거(약관, 의료정보, 법률, 통계)를 제시합니다.' },
-          { role: 'user', content: conversationPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 800
+        contents: [{
+          role: 'user',
+          parts: [{ text: conversationPrompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+          topP: 0.9,
+          topK: 40
+        }
       })
     })
     
     if (!conversationResponse.ok) {
-      throw new Error(`OpenRouter API 오류: ${conversationResponse.status}`)
+      throw new Error(`Gemini API 오류: ${conversationResponse.status}`)
     }
     
     const conversationData = await conversationResponse.json()
-    const aiMessageText = conversationData.choices[0]?.message?.content || '죄송합니다. 답변을 생성하는 중 오류가 발생했습니다.'
+    const aiMessageText = conversationData.candidates?.[0]?.content?.parts?.[0]?.text || '죄송합니다. 답변을 생성하는 중 오류가 발생했습니다.'
     
     // AI 메시지 추가
     const aiMessage = {

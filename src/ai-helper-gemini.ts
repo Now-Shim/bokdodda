@@ -184,7 +184,7 @@ JSON 형식으로 응답하세요.`
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 4000, // 8000 → 4000 (JSON 파싱 안정성 향상)
+          maxOutputTokens: 6000, // 4000 → 6000 (dialogue 완전 생성 보장)
           topP: 0.9,
           topK: 40,
         }
