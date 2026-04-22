@@ -302,12 +302,58 @@ app.post('/api/coaching-sessions/:id/feedback', async (c) => {
 
 // 코칭 세션 대화 (추가 질문)
 app.post('/api/coaching-sessions/:id/conversation', async (c) => {
+  const { env } = c
   const id = parseInt(c.req.param('id'))
   const { message } = await c.req.json()
   
-  const session = coachingSessions.find(s => s.id === id)
+  // 메모리에서 세션 찾기
+  let session = coachingSessions.find(s => s.id === id)
+  
+  // 메모리에 없으면 D1에서 조회
   if (!session) {
-    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+    console.log('[Conversation] 메모리에 세션 없음, D1에서 조회 중:', id)
+    const result = await env.DB.prepare(`
+      SELECT * FROM coaching_sessions WHERE id = ?
+    `).bind(id).first()
+    
+    if (!result) {
+      console.log('[Conversation] D1에도 세션 없음:', id)
+      return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+    }
+    
+    // D1에서 가져온 데이터를 메모리 형식으로 변환
+    session = {
+      id: result.id,
+      plannerId: result.planner_id,
+      context: result.context,
+      situationType: result.situation_type,
+      analyzedQuestion: result.analyzed_question,
+      category: result.category,
+      keyPoints: result.key_points,
+      coachingPoint: result.coaching_point,
+      coachingEvidence: result.coaching_evidence,
+      dialogue: result.dialogue,
+      learningNeeds: result.learning_needs,
+      actionGuidelines: result.action_guidelines,
+      references: result.reference_sources ? JSON.parse(result.reference_sources) : [],
+      aiAnalysis: result.ai_analysis,
+      coachingAdvice: result.coaching_advice,
+      recommendedApproach: result.recommended_approach,
+      tacitKnowledge: result.tacit_knowledge_applied,
+      sessionDate: result.session_date,
+      isShared: result.is_shared === 1,
+      isValidated: result.is_validated === 1,
+      useForLearning: result.use_for_learning === 1,
+      plannerFeedback: result.planner_feedback,
+      effectivenessRating: result.effectiveness_rating,
+      directorFeedback: result.director_feedback,
+      director30YearsKnowledge: result.director_30years_knowledge,
+      directorRating: result.director_rating,
+      managerNote: result.manager_note,
+      conversationMessages: []
+    }
+    coachingSessions.push(session)
+    console.log('[Conversation] D1에서 세션 로드 완료:', session.id)
   }
   
   // 설계사 프로필 가져오기
