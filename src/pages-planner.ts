@@ -563,9 +563,11 @@ export const plannerPageHTML = `
             messagesContainer.scrollTop = messagesContainer.scrollHeight
             
             try {
-                // API 호출
+                // API 호출 (추가 질문은 답변이 길어서 120초 타임아웃)
                 const res = await axios.post(\`/api/coaching-sessions/\${sessionId}/conversation\`, {
                     message
+                }, {
+                    timeout: 120000 // 120초 타임아웃 (긴 답변 대기)
                 })
                 
                 // 로딩 제거
