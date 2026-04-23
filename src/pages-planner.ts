@@ -397,7 +397,7 @@ export const plannerPageHTML = `
                             </h4>
                             
                             <!-- 대화 메시지 목록 -->
-                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[1000px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
+                            <div id="conversationMessages-\${session.id}" class="mb-4 space-y-3 min-h-[200px] max-h-[1200px] overflow-y-auto bg-gray-50 p-4 rounded-lg">
                                 \${session.conversationMessages && session.conversationMessages.length > 0 ? 
                                     session.conversationMessages.map(msg => \`
                                         <div class="\${msg.sender === 'planner' ? 'text-right' : 'text-left'}">
@@ -576,7 +576,7 @@ export const plannerPageHTML = `
                 const aiMessageHtml = \`
                     <div class="text-left">
                         <div class="inline-block max-w-[90%] p-3 rounded-lg bg-white border border-gray-200 text-gray-800">
-                            <p class="text-sm whitespace-pre-wrap">\${aiMessage}</p>
+                            <p class="text-sm whitespace-pre-wrap break-words">\${aiMessage}</p>
                             <p class="text-xs mt-1 opacity-70">\${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
                         </div>
                     </div>
