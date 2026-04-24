@@ -76,10 +76,10 @@ export function renderManagerPage(c: Context) {
                 <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-orange-100 text-sm">내부 노트</p>
+                            <p class="text-orange-100 text-sm">Manager 역할 분석</p>
                             <h3 id="stat-totalNotes" class="text-4xl font-bold mt-2">0</h3>
                         </div>
-                        <i class="fas fa-sticky-note text-3xl text-orange-300"></i>
+                        <i class="fas fa-user-cog text-3xl text-orange-300"></i>
                     </div>
                 </div>
             </div>
@@ -148,13 +148,13 @@ export function renderManagerPage(c: Context) {
         </div>
     </div>
 
-    <!-- 내부 노트 모달 -->
+    <!-- Manager 추가 역할 모달 -->
     <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-orange-600 to-red-600 text-white p-6 rounded-t-2xl">
                 <div class="flex justify-between items-center">
                     <h3 class="text-2xl font-bold">
-                        <i class="fas fa-sticky-note mr-2"></i>내부 노트 작성
+                        <i class="fas fa-user-cog mr-2"></i>Manager 추가 역할 분석
                     </h3>
                     <button onclick="closeNoteModal()" class="text-white hover:text-gray-200 transition">
                         <i class="fas fa-times text-2xl"></i>
@@ -182,15 +182,31 @@ export function renderManagerPage(c: Context) {
                     <div id="modal-coachingAdvice" class="bg-green-50 border-l-4 border-green-500 p-4 rounded text-gray-800 whitespace-pre-wrap"></div>
                 </div>
                 
+                <!-- AI 생성된 Manager 추가 역할 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-semibold text-gray-700">
+                            <i class="fas fa-robot mr-2 text-orange-600"></i>AI 추천: Manager가 해야 할 추가 역할
+                        </label>
+                        <button onclick="generateManagerAdvice()" id="generate-advice-btn" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition font-semibold text-sm shadow">
+                            <i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석 시작
+                        </button>
+                    </div>
+                    <div id="modal-managerAIAdvice" class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded text-gray-800 whitespace-pre-wrap min-h-[120px]">
+                        <p class="text-gray-500 italic">👆 'AI 분석 시작' 버튼을 클릭하면, 이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을 AI가 분석해드립니다.</p>
+                    </div>
+                </div>
+                
+                <!-- 기존 내부 노트 (선택 사항) -->
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-orange-600"></i>내부 노트 (설계사에게 비공개)
+                        <i class="fas fa-lock mr-2 text-gray-600"></i>추가 메모 (선택사항, 설계사에게 비공개)
                     </label>
-                    <textarea id="modal-managerNote" rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="설계사의 특징, 개선 필요 사항, 교육 추천 등을 작성하세요.&#10;&#10;예시:&#10;- 이영수 설계사는 분석적 성향이 강해 첫 만남에서 너무 많은 정보를 제공하는 경향&#10;- 감성적 접근 교육 필요&#10;- 클로징 기법 보강 추천"></textarea>
+                    <textarea id="modal-managerNote" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="AI 분석 외 추가로 기록할 사항이 있다면 작성하세요."></textarea>
                 </div>
                 
                 <div class="flex gap-4">
-                    <button onclick="submitNote()" class="flex-1 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold shadow-lg">
+                    <button onclick="submitManagerAction()" class="flex-1 px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold shadow-lg">
                         <i class="fas fa-save mr-2"></i>저장
                     </button>
                     <button onclick="closeNoteModal()" class="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
@@ -324,7 +340,7 @@ export function renderManagerPage(c: Context) {
             container.innerHTML = sessions.map(session => {
                 const planner = allPlanners.find(p => p.id === session.plannerId)
                 const plannerName = planner ? planner.name : '알 수 없음'
-                const hasNote = session.managerNote && session.managerNote.length > 0
+                const hasManagerAction = (session.managerAIAdvice && session.managerAIAdvice.length > 0) || (session.managerNote && session.managerNote.length > 0)
                     
                 return \`
                     <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
@@ -336,7 +352,7 @@ export function renderManagerPage(c: Context) {
                                 </h4>
                                 <div class="flex gap-2">
                                     <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">\${session.situationType}</span>
-                                    \${hasNote ? '<span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full"><i class="fas fa-sticky-note mr-1"></i>노트 있음</span>' : ''}
+                                    \${hasManagerAction ? '<span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full"><i class="fas fa-user-cog mr-1"></i>Manager 역할 분석됨</span>' : ''}
                                 </div>
                             </div>
                             <div class="text-right">
@@ -363,18 +379,27 @@ export function renderManagerPage(c: Context) {
                         </div>
                         \` : ''}
                         
-                        \${hasNote ? \`
+                        \${session.managerAIAdvice ? \`
                         <div class="mb-4">
                             <p class="text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-lock mr-2 text-orange-600"></i>내부 노트 (비공개)
+                                <i class="fas fa-user-cog mr-2 text-orange-600"></i>Manager 추가 역할 (AI 분석)
                             </p>
-                            <p class="text-gray-700 bg-orange-50 p-3 rounded border-l-4 border-orange-500">\${session.managerNote}</p>
+                            <p class="text-gray-700 bg-orange-50 p-3 rounded border-l-4 border-orange-500 whitespace-pre-wrap">\${session.managerAIAdvice.substring(0, 200)}...</p>
+                        </div>
+                        \` : ''}
+                        
+                        \${session.managerNote ? \`
+                        <div class="mb-4">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-lock mr-2 text-gray-600"></i>추가 메모
+                            </p>
+                            <p class="text-gray-700 bg-gray-50 p-3 rounded border-l-4 border-gray-500">\${session.managerNote}</p>
                         </div>
                         \` : ''}
                         
                         <div class="flex gap-3 mt-4">
-                            <button onclick="openNoteModal(\${session.id})" class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold shadow-lg">
-                                <i class="fas fa-\${hasNote ? 'edit' : 'plus-circle'} mr-2"></i>\${hasNote ? '노트 수정' : '노트 작성'}
+                            <button onclick="openNoteModal(\${session.id})" class="flex-1 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold shadow-lg">
+                                <i class="fas fa-\${hasManagerAction ? 'edit' : 'plus-circle'} mr-2"></i>\${hasManagerAction ? 'Manager 역할 수정' : 'Manager 역할 분석'}
                             </button>
                         </div>
                     </div>
@@ -479,7 +504,7 @@ export function renderManagerPage(c: Context) {
             applyFilters()
         }
         
-        // 노트 모달 열기
+        // Manager 역할 모달 열기
         function openNoteModal(sessionId) {
             const session = allSessions.find(s => s.id === sessionId)
             if (!session) return
@@ -492,39 +517,96 @@ export function renderManagerPage(c: Context) {
             document.getElementById('modal-situationType').textContent = session.situationType
             document.getElementById('modal-context').textContent = session.context
             document.getElementById('modal-coachingAdvice').textContent = session.coachingAdvice
+            
+            // AI 생성 결과 표시
+            const aiAdviceEl = document.getElementById('modal-managerAIAdvice')
+            if (session.managerAIAdvice) {
+                const formattedAdvice = session.managerAIAdvice.replace(/\\n/g, '<br>')
+                aiAdviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdvice + '</p>'
+            } else {
+                aiAdviceEl.innerHTML = '<p class="text-gray-500 italic">👆 \\'AI 분석 시작\\' 버튼을 클릭하면, 이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을 AI가 분석해드립니다.</p>'
+            }
+            
             document.getElementById('modal-managerNote').value = session.managerNote || ''
             
             document.getElementById('noteModal').classList.remove('hidden')
         }
         
-        // 노트 모달 닫기
+        // Manager 역할 모달 닫기
         function closeNoteModal() {
             document.getElementById('noteModal').classList.add('hidden')
         }
         
-        // 노트 제출
-        async function submitNote() {
+        // AI Manager 역할 분석 생성
+        async function generateManagerAdvice() {
+            const sessionId = parseInt(document.getElementById('modal-sessionId').value)
+            const btn = document.getElementById('generate-advice-btn')
+            const adviceEl = document.getElementById('modal-managerAIAdvice')
+            
+            // 버튼 비활성화 및 로딩 표시
+            btn.disabled = true
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>AI 분석 중...'
+            adviceEl.innerHTML = '<p class="text-gray-500 italic"><i class="fas fa-spinner fa-spin mr-2"></i>Manager 추가 역할을 분석하고 있습니다. 잠시만 기다려주세요...</p>'
+            
+            try {
+                const apiUrl = '/api/manager/advice/' + sessionId
+                const response = await axios.post(apiUrl, {}, {
+                    timeout: 120000 // 2분 타임아웃
+                })
+                
+                const advice = response.data.advice
+                const formattedAdviceText = advice.replace(/\\n/g, '<br>')
+                adviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdviceText + '</p>'
+                
+                // 버튼 복구
+                btn.disabled = false
+                btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>재분석'
+                
+                // 세션 데이터 업데이트
+                const session = allSessions.find(s => s.id === sessionId)
+                if (session) {
+                    session.managerAIAdvice = advice
+                }
+                
+            } catch (error) {
+                console.error('AI 분석 실패:', error)
+                adviceEl.innerHTML = '<p class="text-red-600"><i class="fas fa-exclamation-circle mr-2"></i>AI 분석에 실패했습니다. 다시 시도해주세요.</p>'
+                btn.disabled = false
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석 시작'
+            }
+        }
+        
+        // Manager 역할 저장 (AI 분석 + 추가 메모)
+        async function submitManagerAction() {
             const sessionId = parseInt(document.getElementById('modal-sessionId').value)
             const note = document.getElementById('modal-managerNote').value.trim()
+            const aiAdviceEl = document.getElementById('modal-managerAIAdvice')
+            const aiAdviceText = aiAdviceEl.innerText
             
-            if (!note) {
-                alert('내부 노트 내용을 입력해주세요.')
-                return
+            // AI 분석이 아직 안 되었으면 경고
+            if (aiAdviceText.includes('AI 분석 시작')) {
+                const confirmSave = confirm('AI 분석을 아직 하지 않았습니다. 그래도 저장하시겠습니까?')
+                if (!confirmSave) return
             }
             
             try {
-                await axios.post('/api/manager/note', {
+                // 현재 세션에서 managerAIAdvice 가져오기
+                const session = allSessions.find(s => s.id === sessionId)
+                const managerAIAdvice = session?.managerAIAdvice || null
+                
+                await axios.post('/api/manager/action', {
                     sessionId,
-                    managerNote: note
+                    managerAIAdvice,
+                    managerNote: note || null
                 })
                 
-                alert('내부 노트가 성공적으로 저장되었습니다!')
+                alert('Manager 추가 역할이 성공적으로 저장되었습니다!')
                 closeNoteModal()
                 await loadSessions()
                 await loadOverview()
             } catch (error) {
-                console.error('노트 저장 실패:', error)
-                alert('노트 저장에 실패했습니다.')
+                console.error('저장 실패:', error)
+                alert('저장에 실패했습니다.')
             }
         }
         
@@ -552,6 +634,16 @@ export function renderManagerPage(c: Context) {
             localStorage.removeItem('user')
             window.location.href = '/'
         }
+        
+        // 전역 함수 등록
+        window.switchTab = switchTab
+        window.logout = logout
+        window.applyFilters = applyFilters
+        window.openNoteModal = openNoteModal
+        window.closeNoteModal = closeNoteModal
+        window.generateManagerAdvice = generateManagerAdvice
+        window.submitManagerAction = submitManagerAction
+        window.viewPlannerDetail = viewPlannerDetail
         
         // 페이지 로드 시 초기화
         window.onload = init

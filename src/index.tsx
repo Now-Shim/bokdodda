@@ -481,7 +481,7 @@ ${message}
 app.get('/api/manager/overview', (c) => {
   const totalPlanners = users.filter(u => u.role === 'planner').length
   const totalSessions = coachingSessions.length
-  const totalNotes = coachingSessions.filter(s => s.managerNote).length
+  const totalNotes = coachingSessions.filter(s => s.managerAIAdvice || s.managerNote).length
   
   // 최근 세션 (최근 5개)
   const recentSessions = coachingSessions
@@ -570,6 +570,175 @@ app.post('/api/manager/note', async (c) => {
   session.managerNote = managerNote
   
   return c.json({ success: true, session })
+})
+
+// Manager - AI 추가 역할 분석 생성
+app.post('/api/manager/advice/:id', async (c) => {
+  const { env } = c
+  const sessionId = parseInt(c.req.param('id'))
+  
+  // 메모리에서 세션 찾기
+  let session = coachingSessions.find(s => s.id === sessionId)
+  
+  // 메모리에 없으면 D1에서 조회
+  if (!session) {
+    const result = await env.DB.prepare(`
+      SELECT * FROM coaching_sessions WHERE id = ?
+    `).bind(sessionId).first()
+    
+    if (!result) {
+      return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+    }
+    
+    // D1 데이터를 메모리 형식으로 변환
+    session = {
+      id: result.id,
+      plannerId: result.planner_id,
+      context: result.context,
+      situationType: result.situation_type,
+      coachingAdvice: result.coaching_advice,
+      managerNote: result.manager_note,
+      managerAIAdvice: result.manager_ai_advice,
+      // ... 기타 필드
+    }
+  }
+  
+  try {
+    // Manager용 자료 가져오기 (target_audience IN ('manager', 'both', null))
+    const knowledgeResult = await env.DB.prepare(`
+      SELECT * FROM knowledge_base 
+      WHERE priority = 1 
+        AND (target_audience = 'manager' OR target_audience = 'both' OR target_audience IS NULL)
+      ORDER BY uploaded_at DESC
+      LIMIT 10
+    `).all()
+    
+    const managerKnowledge = knowledgeResult.results
+      .map((kb: any) => `[${kb.category}] ${kb.title}\n${kb.content}`)
+      .join('\n\n---\n\n')
+    
+    // Manager용 링크 가져오기
+    const linksResult = await env.DB.prepare(`
+      SELECT * FROM external_links 
+      WHERE is_active = 1 
+        AND (target_audience = 'manager' OR target_audience = 'both' OR target_audience IS NULL)
+      ORDER BY created_at DESC LIMIT 3
+    `).all()
+    
+    // Gemini API 호출
+    const GEMINI_API_KEY = env.GEMINI_API_KEY
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+    
+    const managerPrompt = `당신은 30년 경력의 보험 설계사 조직 관리 전문가입니다.
+
+[코칭 세션 정보]
+- 설계사의 상황: ${session.context}
+- 상황 유형: ${session.situationType}
+- AI가 설계사에게 제공한 코칭: ${session.coachingAdvice}
+
+[Manager용 참고 자료]
+${managerKnowledge}
+
+위 코칭 케이스를 검토하고, **Manager(관리자)가 이 설계사를 위해 추가로 수행해야 할 역할과 행동**을 분석해주세요.
+
+**Manager가 해야 할 추가 역할:**
+1. 이 설계사의 성향 분석 (강점/약점)
+2. 필요한 1:1 코칭 또는 교육 추천
+3. 팀 차원에서 제공할 수 있는 지원
+4. 후속 관찰 및 피드백 포인트
+
+**응답 형식:**
+📊 설계사 성향 분석:
+[분석 내용]
+
+📚 추천 교육/코칭:
+[구체적인 교육 항목]
+
+🤝 Manager가 제공할 지원:
+[즉시 실행 가능한 행동]
+
+📝 후속 관찰 포인트:
+[모니터링 할 사항]
+
+**주의사항:**
+- Manager 입장에서 구체적이고 실행 가능한 행동을 제시
+- 설계사 개인의 성장을 위한 맞춤형 지원 방안 제안
+- 500-800자 분량으로 작성`
+
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: managerPrompt }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2000
+          }
+        })
+      }
+    )
+    
+    if (!geminiResponse.ok) {
+      throw new Error('Gemini API 호출 실패')
+    }
+    
+    const geminiData = await geminiResponse.json()
+    const advice = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 분석을 생성할 수 없습니다.'
+    
+    // 메모리 업데이트
+    const memSession = coachingSessions.find(s => s.id === sessionId)
+    if (memSession) {
+      memSession.managerAIAdvice = advice
+    }
+    
+    // D1에 저장
+    await env.DB.prepare(`
+      UPDATE coaching_sessions 
+      SET manager_ai_advice = ?
+      WHERE id = ?
+    `).bind(advice, sessionId).run()
+    
+    return c.json({ advice })
+    
+  } catch (error) {
+    console.error('Manager AI 분석 실패:', error)
+    return c.json({ error: 'AI 분석 생성 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Manager - 추가 역할 저장 (AI 분석 + 추가 메모)
+app.post('/api/manager/action', async (c) => {
+  const { env } = c
+  const { sessionId, managerAIAdvice, managerNote } = await c.req.json()
+  
+  const session = coachingSessions.find(s => s.id === sessionId)
+  if (!session) {
+    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+  }
+  
+  // 메모리 업데이트
+  if (managerAIAdvice !== undefined) session.managerAIAdvice = managerAIAdvice
+  if (managerNote !== undefined) session.managerNote = managerNote
+  
+  // D1에 저장
+  try {
+    await env.DB.prepare(`
+      UPDATE coaching_sessions 
+      SET manager_ai_advice = ?, manager_note = ?
+      WHERE id = ?
+    `).bind(managerAIAdvice, managerNote, sessionId).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Manager 역할 저장 실패:', error)
+    return c.json({ error: '저장 중 오류가 발생했습니다.' }, 500)
+  }
 })
 
 // Director - 자료 업로드
