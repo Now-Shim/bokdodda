@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manager API Test</title>
+</head>
+<body>
+    <h1>Manager API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="result"></pre>
+    
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script>
+        async function testAPI() {
+            try {
+                console.log('API 호출 시작...')
+                const res = await axios.get('/api/manager/overview')
+                console.log('API 응답:', res.data)
+                document.getElementById('result').textContent = JSON.stringify(res.data, null, 2)
+            } catch (error) {
+                console.error('API 에러:', error)
+                document.getElementById('result').textContent = 'Error: ' + error.message
+            }
+        }
+    </script>
+</body>
+</html>

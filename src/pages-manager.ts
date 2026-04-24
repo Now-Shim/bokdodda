@@ -226,13 +226,16 @@ export function renderManagerPage(c: Context) {
         
         // 초기화
         async function init() {
+            console.log('[Manager] init 시작')
             const userData = localStorage.getItem('user')
             if (!userData) {
+                console.log('[Manager] 사용자 정보 없음, 로그인 페이지로 이동')
                 window.location.href = '/'
                 return
             }
             
             currentUser = JSON.parse(userData)
+            console.log('[Manager] 현재 사용자:', currentUser)
             if (currentUser.role !== 'manager') {
                 alert('관리자 권한이 필요합니다.')
                 window.location.href = '/'
@@ -241,25 +244,33 @@ export function renderManagerPage(c: Context) {
             
             document.getElementById('managerName').textContent = currentUser.name
             
+            console.log('[Manager] 데이터 로딩 시작...')
             await loadOverview()
             await loadSessions()
             await loadPlanners()
+            console.log('[Manager] init 완료')
         }
         
         // 전체 현황 로드
         async function loadOverview() {
             try {
+                console.log('[Manager] loadOverview 시작')
                 const res = await axios.get('/api/manager/overview')
+                console.log('[Manager] API 응답:', res.data)
                 const data = res.data
                 
+                console.log('[Manager] 통계 업데이트 중...')
                 document.getElementById('stat-totalPlanners').textContent = data.totalPlanners || 0
                 document.getElementById('stat-totalSessions').textContent = data.totalSessions || 0
                 document.getElementById('stat-totalNotes').textContent = data.totalNotes || 0
                 
+                console.log('[Manager] 최근 세션 표시:', data.recentSessions?.length)
                 displayRecentSessions(data.recentSessions || [])
+                console.log('[Manager] 주의 설계사 표시:', data.attentionPlanners?.length)
                 displayAttentionPlanners(data.attentionPlanners || [])
+                console.log('[Manager] loadOverview 완료')
             } catch (error) {
-                console.error('전체 현황 로드 실패:', error)
+                console.error('[Manager] 전체 현황 로드 실패:', error)
             }
         }
         
@@ -312,30 +323,40 @@ export function renderManagerPage(c: Context) {
         
         // 세션 목록 로드
         async function loadSessions() {
+            console.log('[Manager] loadSessions 시작')
             try {
                 const res = await axios.get('/api/manager/sessions')
+                console.log('[Manager] API 응답:', res.data)
                 allSessions = res.data.sessions
                 allPlanners = res.data.planners
+                console.log('[Manager] 세션 수:', allSessions.length, '설계사 수:', allPlanners.length)
                 
                 // 필터 옵션 설정
                 const plannerSelect = document.getElementById('filter-planner')
                 plannerSelect.innerHTML = '<option value="all">전체</option>' + 
                     allPlanners.map(p => \`<option value="\${p.id}">\${p.name}</option>\`).join('')
                 
+                console.log('[Manager] displaySessions 호출 전')
                 displaySessions(allSessions)
+                console.log('[Manager] displaySessions 호출 후')
             } catch (error) {
-                console.error('세션 로드 실패:', error)
+                console.error('[Manager] 세션 로드 실패:', error)
             }
         }
         
         // 세션 표시
         function displaySessions(sessions) {
+            console.log('[Manager] displaySessions 시작, 세션 수:', sessions.length)
             const container = document.getElementById('sessionsList')
+            console.log('[Manager] sessionsList container:', container)
             
             if (sessions.length === 0) {
+                console.log('[Manager] 세션이 없습니다')
                 container.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8 text-center text-gray-500">조건에 맞는 세션이 없습니다.</div>'
                 return
             }
+            
+            console.log('[Manager] 세션 렌더링 시작...')
             
             container.innerHTML = sessions.map(session => {
                 const planner = allPlanners.find(p => p.id === session.plannerId)
