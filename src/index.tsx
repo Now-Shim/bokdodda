@@ -8,6 +8,65 @@ import type { CoachingSession, KnowledgeBase } from './data'
 
 const app = new Hono()
 
+// D1에서 데이터를 메모리로 로드 (서버 재시작 시 복구)
+let isDataLoaded = false
+
+async function loadSessionsFromD1(env: any) {
+  if (isDataLoaded) return
+  
+  console.log('[Init] D1에서 세션 데이터 로딩 중...')
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM coaching_sessions ORDER BY session_date DESC
+    `).all()
+    
+    // 기존 메모리 데이터 클리어
+    coachingSessions.length = 0
+    
+    // D1 데이터를 메모리로 로드
+    for (const row of result.results) {
+      coachingSessions.push({
+        id: row.id,
+        plannerId: row.planner_id,
+        context: row.context,
+        situationType: row.situation_type,
+        analyzedQuestion: row.analyzed_question,
+        category: row.category,
+        keyPoints: row.key_points,
+        coachingPoint: row.coaching_point,
+        coachingEvidence: row.coaching_evidence,
+        dialogue: row.dialogue,
+        learningNeeds: row.learning_needs,
+        actionGuidelines: row.action_guidelines,
+        references: row.reference_sources ? JSON.parse(row.reference_sources) : [],
+        aiAnalysis: row.ai_analysis,
+        coachingAdvice: row.coaching_advice,
+        recommendedApproach: row.recommended_approach,
+        tacitKnowledge: row.tacit_knowledge_applied,
+        sessionDate: row.session_date,
+        isShared: row.is_shared === 1,
+        isValidated: row.is_validated === 1,
+        useForLearning: row.use_for_learning === 1,
+        plannerFeedback: row.planner_feedback,
+        effectivenessRating: row.effectiveness_rating,
+        directorFeedback: row.director_feedback,
+        director30YearsKnowledge: row.director_30years_knowledge,
+        directorRating: row.director_rating,
+        managerNote: row.manager_note,
+        managerAIAdvice: row.manager_ai_advice,
+        managerRequest: row.manager_request,
+        conversationMessages: []
+      })
+    }
+    
+    isDataLoaded = true
+    console.log(`[Init] D1에서 ${coachingSessions.length}개 세션 로드 완료`)
+  } catch (error) {
+    console.error('[Init] D1 데이터 로드 실패:', error)
+  }
+}
+
 // CORS 설정
 app.use('/api/*', cors())
 
@@ -45,13 +104,19 @@ app.get('/api/planner/:id', (c) => {
 })
 
 // 설계사별 코칭 세션 목록
-app.get('/api/coaching-sessions/:plannerId', (c) => {
+app.get('/api/coaching-sessions/:plannerId', async (c) => {
+  const { env } = c
   const plannerId = parseInt(c.req.param('plannerId'))
+  
+  // D1에서 데이터 로드 (재시작 후 첫 요청 시)
+  await loadSessionsFromD1(env)
+  
   const sessions = coachingSessions.filter(s => s.plannerId === plannerId)
   // 설계사는 내부 노트와 Director 피드백을 볼 수 없음
   const sanitizedSessions = sessions.map(s => ({
     ...s,
     managerNote: undefined,
+    managerAIAdvice: undefined,
     directorFeedback: undefined,
     directorRating: undefined,
   }))
@@ -478,7 +543,12 @@ ${message}
 })
 
 // 관리자 - 전체 현황
-app.get('/api/manager/overview', (c) => {
+app.get('/api/manager/overview', async (c) => {
+  const { env } = c
+  
+  // D1에서 데이터 로드 (재시작 후 첫 요청 시)
+  await loadSessionsFromD1(env)
+  
   const totalPlanners = users.filter(u => u.role === 'planner').length
   const totalSessions = coachingSessions.length
   const totalNotes = coachingSessions.filter(s => s.managerAIAdvice || s.managerNote).length
@@ -527,7 +597,12 @@ app.get('/api/manager/overview', (c) => {
 })
 
 // 관리자 - 전체 세션 목록 (내부 노트 포함)
-app.get('/api/manager/sessions', (c) => {
+app.get('/api/manager/sessions', async (c) => {
+  const { env } = c
+  
+  // D1에서 데이터 로드 (재시작 후 첫 요청 시)
+  await loadSessionsFromD1(env)
+  
   const sessions = coachingSessions.map(s => {
     const planner = users.find(u => u.id === s.plannerId)
     return { ...s, plannerName: planner?.name }
