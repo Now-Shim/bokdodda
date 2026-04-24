@@ -645,8 +645,35 @@ export function renderManagerPage(c: Context) {
         window.submitManagerAction = submitManagerAction
         window.viewPlannerDetail = viewPlannerDetail
         
+        // 자동 새로고침 (30초마다)
+        let autoRefreshInterval = null
+        
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(async () => {
+                console.log('[Manager] 자동 새로고침 중...')
+                await loadOverview()
+                await loadSessions()
+                await loadPlanners()
+            }, 30000) // 30초
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval)
+                autoRefreshInterval = null
+            }
+        }
+        
         // 페이지 로드 시 초기화
-        window.onload = init
+        window.onload = () => {
+            init()
+            startAutoRefresh()
+        }
+        
+        // 페이지 종료 시 자동 새로고침 중지
+        window.onbeforeunload = () => {
+            stopAutoRefresh()
+        }
     </script>
 </body>
 </html>

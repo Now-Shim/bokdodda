@@ -667,6 +667,7 @@ ${managerKnowledge}
 - 설계사 개인의 성장을 위한 맞춤형 지원 방안 제안
 - 500-800자 분량으로 작성`
 
+    console.log('[Manager AI] Gemini API 호출 시작...')
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -684,12 +685,19 @@ ${managerKnowledge}
       }
     )
     
+    console.log('[Manager AI] Gemini 응답 상태:', geminiResponse.status)
+    
     if (!geminiResponse.ok) {
-      throw new Error('Gemini API 호출 실패')
+      const errorText = await geminiResponse.text()
+      console.error('[Manager AI] Gemini API 에러:', errorText)
+      throw new Error(`Gemini API 호출 실패: ${geminiResponse.status} - ${errorText}`)
     }
     
     const geminiData = await geminiResponse.json()
+    console.log('[Manager AI] Gemini 응답 데이터:', JSON.stringify(geminiData).substring(0, 200))
+    
     const advice = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 분석을 생성할 수 없습니다.'
+    console.log('[Manager AI] 생성된 조언 길이:', advice.length)
     
     // 메모리 업데이트
     const memSession = coachingSessions.find(s => s.id === sessionId)
