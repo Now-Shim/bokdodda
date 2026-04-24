@@ -539,6 +539,17 @@ export function renderDirectorPage(c: Context) {
                 
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-users text-purple-600 mr-2"></i>대상
+                    </label>
+                    <select id="link-target" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="both">👥 공용 (설계사 + 관리자 모두)</option>
+                        <option value="planner">👤 설계사 전용</option>
+                        <option value="manager">👔 관리자 전용</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
                         <i class="fas fa-tag text-purple-600 mr-2"></i>카테고리
                     </label>
                     <select id="link-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
@@ -548,17 +559,6 @@ export function renderDirectorPage(c: Context) {
                         <option value="뉴스">뉴스</option>
                         <option value="업계동향">업계동향</option>
                         <option value="기타">기타</option>
-                    </select>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-users text-purple-600 mr-2"></i>대상
-                    </label>
-                    <select id="link-target" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="both">👥 공용 (설계사 + 관리자 모두)</option>
-                        <option value="planner">👤 설계사 전용</option>
-                        <option value="manager">👔 관리자 전용</option>
                     </select>
                 </div>
                 
