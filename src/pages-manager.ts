@@ -388,7 +388,7 @@ export function renderManagerPage(c: Context) {
                         
                         <div class="mb-4">
                             <p class="text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-comments mr-2 text-green-600"></i>AI 코칭 내용</p>
-                            <p class="text-gray-700 bg-green-50 p-3 rounded border-l-4 border-green-500 whitespace-pre-wrap">\${session.coachingAdvice.substring(0, 200)}...</p>
+                            <p class="text-gray-700 bg-green-50 p-3 rounded border-l-4 border-green-500 whitespace-pre-wrap">\${session.coachingAdvice ? session.coachingAdvice.substring(0, 200) + '...' : '코칭 내용 없음'}</p>
                         </div>
                         
                         \${session.managerRequest ? \`
@@ -405,7 +405,7 @@ export function renderManagerPage(c: Context) {
                             <p class="text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-user-cog mr-2 text-orange-600"></i>Manager 추가 역할 (AI 분석)
                             </p>
-                            <p class="text-gray-700 bg-orange-50 p-3 rounded border-l-4 border-orange-500 whitespace-pre-wrap">\${session.managerAIAdvice.substring(0, 200)}...</p>
+                            <p class="text-gray-700 bg-orange-50 p-3 rounded border-l-4 border-orange-500 whitespace-pre-wrap">\${(session.managerAIAdvice || '').substring(0, 200)}...</p>
                         </div>
                         \` : ''}
                         
