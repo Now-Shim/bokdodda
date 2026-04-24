@@ -543,6 +543,9 @@ export function renderManagerPage(c: Context) {
             const btn = document.getElementById('generate-advice-btn')
             const adviceEl = document.getElementById('modal-managerAIAdvice')
             
+            console.log('[Manager AI] 세션 ID:', sessionId)
+            console.log('[Manager AI] API 호출 준비...')
+            
             // 버튼 비활성화 및 로딩 표시
             btn.disabled = true
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>AI 분석 중...'
@@ -550,12 +553,16 @@ export function renderManagerPage(c: Context) {
             
             try {
                 const apiUrl = '/api/manager/advice/' + sessionId
+                console.log('[Manager AI] API URL:', apiUrl)
+                
                 const response = await axios.post(apiUrl, {}, {
                     timeout: 120000 // 2분 타임아웃
                 })
                 
+                console.log('[Manager AI] 응답 성공:', response.data)
+                
                 const advice = response.data.advice
-                const formattedAdviceText = advice.replace(/\\n/g, '<br>')
+                const formattedAdviceText = advice.replace(/\n/g, '<br>')
                 adviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdviceText + '</p>'
                 
                 // 버튼 복구
@@ -569,8 +576,17 @@ export function renderManagerPage(c: Context) {
                 }
                 
             } catch (error) {
-                console.error('AI 분석 실패:', error)
-                adviceEl.innerHTML = '<p class="text-red-600"><i class="fas fa-exclamation-circle mr-2"></i>AI 분석에 실패했습니다. 다시 시도해주세요.</p>'
+                console.error('[Manager AI] 전체 에러 객체:', error)
+                console.error('[Manager AI] 에러 응답:', error.response)
+                console.error('[Manager AI] 에러 데이터:', error.response?.data)
+                console.error('[Manager AI] 에러 상태:', error.response?.status)
+                
+                let errorMsg = 'AI 분석에 실패했습니다. 다시 시도해주세요.'
+                if (error.response?.data?.error) {
+                    errorMsg = error.response.data.error
+                }
+                
+                adviceEl.innerHTML = '<p class="text-red-600"><i class="fas fa-exclamation-circle mr-2"></i>' + errorMsg + '</p>'
                 btn.disabled = false
                 btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석 시작'
             }
