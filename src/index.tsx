@@ -566,13 +566,13 @@ app.post('/api/manager/note', async (c) => {
 
 // Director - 자료 업로드
 app.post('/api/director/knowledge', async (c) => {
-  const { title, category, content, priority, fileType, fileName, fileSize } = await c.req.json()
+  const { title, category, content, priority, targetAudience, fileType, fileName, fileSize } = await c.req.json()
   const { env } = c
   
   try {
     const result = await env.DB.prepare(`
-      INSERT INTO knowledge_base (title, category, content, file_type, file_name, file_size, priority, uploaded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO knowledge_base (title, category, content, file_type, file_name, file_size, priority, target_audience, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       title,
       category,
@@ -581,6 +581,7 @@ app.post('/api/director/knowledge', async (c) => {
       fileName || null,
       fileSize || null,
       priority ? 1 : 0,
+      targetAudience || 'both',
       1 // Director ID
     ).run()
     
@@ -962,18 +963,19 @@ app.get('/api/director/links', async (c) => {
 
 // Director - 외부 링크 추가
 app.post('/api/director/links', async (c) => {
-  const { name, url, description, category, isActive, authRequired, username, password, loginUrl } = await c.req.json()
+  const { name, url, description, category, targetAudience, isActive, authRequired, username, password, loginUrl } = await c.req.json()
   const { env } = c
   
   try {
     const result = await env.DB.prepare(`
-      INSERT INTO external_links (name, url, description, category, is_active, auth_required, username, password, login_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO external_links (name, url, description, category, target_audience, is_active, auth_required, username, password, login_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       name,
       url,
       description || null,
       category || null,
+      targetAudience || 'both',
       isActive ? 1 : 0,
       authRequired ? 1 : 0,
       username || null,
@@ -1002,13 +1004,13 @@ app.post('/api/director/links', async (c) => {
 // Director - 외부 링크 수정
 app.put('/api/director/links/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
-  const { name, url, description, category, isActive, authRequired, username, password, loginUrl } = await c.req.json()
+  const { name, url, description, category, targetAudience, isActive, authRequired, username, password, loginUrl } = await c.req.json()
   const { env } = c
   
   try {
     await env.DB.prepare(`
       UPDATE external_links 
-      SET name = ?, url = ?, description = ?, category = ?, is_active = ?, 
+      SET name = ?, url = ?, description = ?, category = ?, target_audience = ?, is_active = ?, 
           auth_required = ?, username = ?, password = ?, login_url = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -1017,6 +1019,7 @@ app.put('/api/director/links/:id', async (c) => {
       url,
       description || null,
       category || null,
+      targetAudience || 'both',
       isActive ? 1 : 0,
       authRequired ? 1 : 0,
       username || null,

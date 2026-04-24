@@ -200,6 +200,15 @@ export function renderDirectorPage(c: Context) {
                 </div>
                 
                 <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">대상</label>
+                    <select id="upload-target" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="both">👥 공용 (설계사 + 관리자 모두)</option>
+                        <option value="planner">👤 설계사 전용</option>
+                        <option value="manager">👔 관리자 전용</option>
+                    </select>
+                </div>
+                
+                <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         내용 입력 방식
                     </label>
@@ -539,6 +548,17 @@ export function renderDirectorPage(c: Context) {
                         <option value="뉴스">뉴스</option>
                         <option value="업계동향">업계동향</option>
                         <option value="기타">기타</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-users text-purple-600 mr-2"></i>대상
+                    </label>
+                    <select id="link-target" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="both">👥 공용 (설계사 + 관리자 모두)</option>
+                        <option value="planner">👤 설계사 전용</option>
+                        <option value="manager">👔 관리자 전용</option>
                     </select>
                 </div>
                 
@@ -1095,6 +1115,7 @@ export function renderDirectorPage(c: Context) {
         async function uploadKnowledge() {
             const title = document.getElementById('upload-title').value.trim()
             const category = document.getElementById('upload-category').value
+            const targetAudience = document.getElementById('upload-target').value
             const priority = document.getElementById('upload-priority').checked
             
             let content = ''
@@ -1121,6 +1142,7 @@ export function renderDirectorPage(c: Context) {
                     category,
                     content,
                     priority,
+                    targetAudience,
                     fileType,
                     fileName,
                     fileSize
@@ -1455,6 +1477,7 @@ export function renderDirectorPage(c: Context) {
             const url = document.getElementById('link-url').value.trim()
             const description = document.getElementById('link-description').value.trim()
             const category = document.getElementById('link-category').value
+            const targetAudience = document.getElementById('link-target').value
             const isActive = document.getElementById('link-isActive').checked
             
             // 인증 정보
@@ -1475,7 +1498,7 @@ export function renderDirectorPage(c: Context) {
             
             try {
                 const payload = {
-                    name, url, description, category, isActive,
+                    name, url, description, category, targetAudience, isActive,
                     authRequired, username, password, loginUrl
                 }
                 
