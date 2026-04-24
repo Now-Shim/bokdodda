@@ -72,8 +72,12 @@ app.post('/api/coaching-sessions', async (c) => {
   
   try {
     // Director가 업로드한 지식 자료 가져오기 (D1에서)
+    // Planner(설계사)용 자료만 가져오기: target_audience IN ('planner', 'both', null)
     const knowledgeResult = await c.env.DB.prepare(`
-      SELECT * FROM knowledge_base WHERE priority = 1 ORDER BY uploaded_at DESC
+      SELECT * FROM knowledge_base 
+      WHERE priority = 1 
+        AND (target_audience = 'planner' OR target_audience = 'both' OR target_audience IS NULL)
+      ORDER BY uploaded_at DESC
     `).all()
     
     const directorKnowledge = knowledgeResult.results
@@ -81,8 +85,12 @@ app.post('/api/coaching-sessions', async (c) => {
       .join('\n\n---\n\n')
     
     // 외부 링크에서 관련 데이터 수집 (활성화된 링크만)
+    // Planner(설계사)용 링크만 가져오기: target_audience IN ('planner', 'both', null)
     const linksResult = await c.env.DB.prepare(`
-      SELECT * FROM external_links WHERE is_active = 1 ORDER BY created_at DESC LIMIT 5
+      SELECT * FROM external_links 
+      WHERE is_active = 1 
+        AND (target_audience = 'planner' OR target_audience = 'both' OR target_audience IS NULL)
+      ORDER BY created_at DESC LIMIT 5
     `).all()
     
     let externalLinkData = ''
