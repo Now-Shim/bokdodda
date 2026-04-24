@@ -521,7 +521,7 @@ export function renderManagerPage(c: Context) {
             // AI 생성 결과 표시
             const aiAdviceEl = document.getElementById('modal-managerAIAdvice')
             if (session.managerAIAdvice) {
-                const formattedAdvice = session.managerAIAdvice.replace(/\\n/g, '<br>')
+                const formattedAdvice = session.managerAIAdvice.replace(/\n/g, '<br>')
                 aiAdviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdvice + '</p>'
             } else {
                 aiAdviceEl.innerHTML = '<p class="text-gray-500 italic">👆 \\'AI 분석 시작\\' 버튼을 클릭하면, 이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을 AI가 분석해드립니다.</p>'
