@@ -231,8 +231,12 @@ export const plannerPageHTML = `
                     alert('AI 코칭이 완료되었습니다!')
                     document.getElementById('context').value = ''
                     document.getElementById('situationType').value = '신규고객'
+                    
+                    // 먼저 세션 목록을 새로고침
                     await loadSessions()
-                    viewSession(res.data.session.id)
+                    
+                    // API 재호출 없이 받은 데이터로 바로 표시
+                    viewSessionWithData(res.data.session)
                 } else {
                     throw new Error('코칭 세션 생성 실패')
                 }
@@ -244,13 +248,42 @@ export const plannerPageHTML = `
             }
         })
         
+        // 세션 데이터로 직접 모달 표시 (API 재호출 없음)
+        function viewSessionWithData(session) {
+            if (!session) return
+            
+            console.log('[viewSessionWithData] 받은 세션 데이터:', {
+                id: session.id,
+                hasCoachingEvidence: !!session.coachingEvidence,
+                hasDialogue: !!session.dialogue,
+                hasLearningNeeds: !!session.learningNeeds
+            })
+            
+            // 안전하게 데이터 준비
+            const safeData = {
+                analyzedQuestion: session.analyzedQuestion || session.context,
+                category: session.category || session.situationType,
+                keyPoints: session.keyPoints || session.aiAnalysis,
+                coachingPoint: session.coachingPoint || session.coachingAdvice,
+                coachingEvidence: session.coachingEvidence || '근거 분석 중...',
+                dialogue: session.dialogue || session.dialogueScript || '대화 스크립트 생성 중...',
+                learningNeeds: session.learningNeeds || session.requiredKnowledge || '추가 학습 없음',
+                actionGuidelines: session.actionGuidelines || session.recommendedApproach,
+                tacitKnowledge: session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'
+            }
+            
+            // displaySessionModal 함수 호출
+            displaySessionModal(session, safeData)
+        }
+        
+        // 세션 ID로 API 재호출하여 모달 표시 (히스토리 클릭 시 사용)
         function viewSession(id) {
             axios.get(\`/api/coaching-sessions/\${user.id}\`).then(res => {
                 const session = res.data.sessions.find(s => s.id === id)
                 if (!session) return
                 
                 // 디버그 로그
-                console.log('Session data:', {
+                console.log('[viewSession] API로 가져온 세션 데이터:', {
                     id: session.id,
                     hasCoachingEvidence: !!session.coachingEvidence,
                     hasDialogue: !!session.dialogue,
@@ -273,6 +306,13 @@ export const plannerPageHTML = `
                     tacitKnowledge: session.tacitKnowledgeApplied || '[내부 참조용 - 30년 노하우 기반 코칭]'
                 }
                 
+                // displaySessionModal 함수 호출
+                displaySessionModal(session, safeData)
+            })
+        }
+        
+        // 공통 모달 표시 함수
+        function displaySessionModal(session, safeData) {
                 // DOM 요소 생성 및 데이터 안전하게 삽입
                 const detailContainer = document.getElementById('sessionDetail')
                 detailContainer.innerHTML = \`
@@ -516,7 +556,6 @@ export const plannerPageHTML = `
                 }
                 
                 document.getElementById('sessionModal').classList.remove('hidden')
-            })
         }
         
         function closeModal() {
