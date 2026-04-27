@@ -763,7 +763,9 @@ ${linksResult.results.map((link: any) => `- ${link.title}: ${link.url}`).join('\
           }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 2000
+            maxOutputTokens: 8000,  // 대폭 증가
+            topP: 0.95,
+            topK: 40
           }
         })
       }
@@ -778,10 +780,15 @@ ${linksResult.results.map((link: any) => `- ${link.title}: ${link.url}`).join('\
     }
     
     const geminiData = await geminiResponse.json()
-    console.log('[Manager AI] Gemini 응답 데이터:', JSON.stringify(geminiData).substring(0, 200))
+    console.log('[Manager AI] 전체 Gemini 응답:', JSON.stringify(geminiData, null, 2))
+    
+    // finish_reason 확인
+    const finishReason = geminiData.candidates?.[0]?.finishReason
+    console.log('[Manager AI] Finish Reason:', finishReason)
     
     const advice = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 분석을 생성할 수 없습니다.'
     console.log('[Manager AI] 생성된 조언 길이:', advice.length)
+    console.log('[Manager AI] 생성된 조언 전체:\n', advice)
     
     // 메모리 업데이트
     const memSession = coachingSessions.find(s => s.id === sessionId)
