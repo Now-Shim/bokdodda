@@ -179,6 +179,11 @@ app.post('/api/coaching-sessions', async (c) => {
             const data = await crawlRes.json()
             const content = data.content || data.markdown || ''
             
+            // 링크 카테고리에 따라 처리 방식 변경
+            const linkName = (link as any).name || ''
+            const isLegalDoc = linkName.includes('약관') || linkName.includes('법령') || 
+                               linkName.includes('규정') || linkName.includes('조항')
+            
             // 간단한 키워드 필터링 (관련성 있는 내용만 포함)
             let relevantContent = content
             if (keywords.length > 0) {
@@ -188,13 +193,19 @@ app.post('/api/coaching-sessions', async (c) => {
               )
               
               if (relevantLines.length > 0) {
-                relevantContent = relevantLines.slice(0, 20).join('\n') // 최대 20줄
+                // 법률/약관 문서는 더 많은 내용 포함 (최대 50줄)
+                const maxLines = isLegalDoc ? 50 : 20
+                relevantContent = relevantLines.slice(0, maxLines).join('\n')
               } else {
-                relevantContent = content.substring(0, 1000) // 관련 내용 없으면 처음 1000자
+                // 관련 내용 없으면 처음 부분 (법률 문서는 더 많이)
+                const maxChars = isLegalDoc ? 3000 : 1000
+                relevantContent = content.substring(0, maxChars)
               }
             }
             
-            externalLinkData += `\n\n[외부 참조: ${(link as any).name}]\nURL: ${(link as any).url}\n${relevantContent.substring(0, 1500)}\n---`
+            // 법률/약관 문서는 최대 5000자, 일반 문서는 2000자
+            const maxContentLength = isLegalDoc ? 5000 : 2000
+            externalLinkData += `\n\n[외부 참조: ${linkName}]\nURL: ${(link as any).url}\n${relevantContent.substring(0, maxContentLength)}\n---`
           }
         } catch (err) {
           console.error(`링크 크롤링 실패 (${(link as any).url}):`, err)
@@ -751,12 +762,11 @@ ${linksResult.results.map((link: any) => `- ${link.title}: ${link.url}`).join('\
 - 설계사의 자존감을 높이는 긍정적 언어
 - 부드러운 표현 ("~하면 좋겠습니다", "~을 추천합니다")
 
-**⚠️ 절대 금지 사항:**
-- 구체적인 약관명, 조항 번호, 법률명을 언급하지 마세요
-- "표준약관", "제12조", "약관 제XX조" 같은 표현 사용 금지
-- 확인되지 않은 출처나 근거를 제시하지 마세요
-- 대신 "보험 약관", "계약 조건", "보장 내용" 같은 일반적 표현 사용
-- 법률/의료 자문이 필요한 경우 "전문가 상담 권장" 명시`
+**🎯 근거 제시 원칙:**
+- 위에 제공된 [Manager용 참고 자료]와 [외부 링크]를 최우선으로 참조하세요
+- 제공된 자료에 구체적 약관, 법령, 의료 정보가 있다면 정확히 인용하세요
+- 제공된 자료에 없는 내용은 추측하지 말고 "추가 확인 필요" 또는 "전문가 상담 권장" 명시
+- 출처가 명확한 경우에만 구체적으로 제시하고, 불확실하면 일반적 표현 사용`
 
     console.log('[Manager AI] Gemini API 호출 시작...')
     const geminiResponse = await fetch(
