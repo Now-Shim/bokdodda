@@ -198,12 +198,13 @@ export function renderManagerPage(c: Context) {
                             <span class="font-semibold">디렉터 업로드 자료(매니저용/공용)</span>와 <span class="font-semibold">외부 링크</span>를 참고하여, 설계사의 <span class="text-orange-600 font-bold">자존감 향상</span>과 <span class="text-orange-600 font-bold">구체적 실행</span>에 초점을 맞춘 코칭을 제공합니다.
                         </div>
                     </div>
-                    <div id="modal-managerAIAdvice" class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-400 p-6 rounded-xl text-gray-800 whitespace-pre-wrap min-h-[300px] max-h-[600px] overflow-y-auto shadow-inner">
-                        <p class="text-gray-500 italic text-center py-8">
-                            <i class="fas fa-lightbulb text-4xl text-orange-400 mb-4 block"></i>
-                            👆 <span class="font-bold">'AI 분석 시작'</span> 버튼을 클릭하면,<br>
+                    <div id="modal-managerAIAdvice" class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-400 p-6 rounded-xl text-gray-800 min-h-[500px] max-h-[700px] overflow-y-auto shadow-inner text-base leading-relaxed">
+                        <p class="text-gray-500 italic text-center py-12">
+                            <i class="fas fa-lightbulb text-5xl text-orange-400 mb-6 block"></i>
+                            <span class="text-lg">👆 <span class="font-bold">'AI 분석 시작'</span> 버튼을 클릭하면,<br><br>
                             이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을<br>
-                            <span class="text-orange-600 font-bold">자존감 향상</span>과 <span class="text-orange-600 font-bold">구체적 실행</span> 중심으로 AI가 분석해드립니다.
+                            <span class="text-orange-600 font-bold text-xl">자존감 향상</span>과 <span class="text-orange-600 font-bold text-xl">구체적 실행</span> 중심으로<br>
+                            AI가 분석해드립니다.</span>
                         </p>
                     </div>
                 </div>
@@ -556,10 +557,24 @@ export function renderManagerPage(c: Context) {
             // AI 생성 결과 표시
             const aiAdviceEl = document.getElementById('modal-managerAIAdvice')
             if (session.managerAIAdvice) {
-                const formattedAdvice = session.managerAIAdvice.replace(/\\n/g, '<br>')
-                aiAdviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdvice + '</p>'
+                // whitespace-pre-wrap 제거하고 명시적으로 줄바꿈 처리
+                const lines = session.managerAIAdvice.split('\\n')
+                const formattedHTML = lines.map(line => {
+                    if (line.trim() === '') return '<br>'
+                    if (line.trim() === '---') return '<hr class="my-4 border-gray-300">'
+                    // 이모지로 시작하는 섹션 헤더는 굵게
+                    if (/^[💪📊🎯📚🗣️📝🤝⭐]/.test(line.trim())) {
+                        return '<p class="font-bold text-lg mt-4 mb-2 text-orange-700">' + line + '</p>'
+                    }
+                    // 숫자로 시작하는 리스트 항목
+                    if (/^\\d+\\./.test(line.trim())) {
+                        return '<p class="ml-4 mb-2 text-gray-800">' + line + '</p>'
+                    }
+                    return '<p class="mb-2 text-gray-800">' + line + '</p>'
+                }).join('')
+                aiAdviceEl.innerHTML = '<div class="space-y-1">' + formattedHTML + '</div>'
             } else {
-                aiAdviceEl.innerHTML = '<p class="text-gray-500 italic">👆 \\'AI 분석 시작\\' 버튼을 클릭하면, 이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을 AI가 분석해드립니다.</p>'
+                aiAdviceEl.innerHTML = '<p class="text-gray-500 italic text-center py-12"><i class="fas fa-lightbulb text-5xl text-orange-400 mb-6 block"></i><span class="text-lg">👆 <span class="font-bold">\\'AI 분석 시작\\'</span> 버튼을 클릭하면,<br><br>이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을<br><span class="text-orange-600 font-bold text-xl">자존감 향상</span>과 <span class="text-orange-600 font-bold text-xl">구체적 실행</span> 중심으로<br>AI가 분석해드립니다.</span></p>'
             }
             
             document.getElementById('modal-managerNote').value = session.managerNote || ''
@@ -597,8 +612,24 @@ export function renderManagerPage(c: Context) {
                 console.log('[Manager AI] 응답 성공:', response.data)
                 
                 const advice = response.data.advice
-                const formattedAdviceText = advice.replace(/\\n/g, '<br>')
-                adviceEl.innerHTML = '<p class="text-gray-800">' + formattedAdviceText + '</p>'
+                
+                // 포맷팅: 이모지 섹션 헤더 강조, 리스트 들여쓰기
+                const lines = advice.split('\\n')
+                const formattedHTML = lines.map(line => {
+                    if (line.trim() === '') return '<br>'
+                    if (line.trim() === '---') return '<hr class="my-4 border-gray-300">'
+                    // 이모지로 시작하는 섹션 헤더는 굵게
+                    if (/^[💪📊🎯📚🗣️📝🤝⭐]/.test(line.trim())) {
+                        return '<p class="font-bold text-lg mt-4 mb-2 text-orange-700">' + line + '</p>'
+                    }
+                    // 숫자로 시작하는 리스트 항목
+                    if (/^\\d+\\./.test(line.trim())) {
+                        return '<p class="ml-4 mb-2 text-gray-800">' + line + '</p>'
+                    }
+                    return '<p class="mb-2 text-gray-800">' + line + '</p>'
+                }).join('')
+                
+                adviceEl.innerHTML = '<div class="space-y-1">' + formattedHTML + '</div>'
                 
                 // 버튼 복구
                 btn.disabled = false
