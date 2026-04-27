@@ -898,6 +898,7 @@ export function renderManagerPage(c: Context) {
                 await loadOverview()
                 await loadSessions()
                 await loadPlanners()
+                await loadNotifications() // 알림도 함께 새로고침
             }, 30000) // 30초
         }
         
