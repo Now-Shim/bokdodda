@@ -299,17 +299,35 @@ export function renderManagerPage(c: Context) {
             }
             
             container.innerHTML = sessions.map(s => \`
-                <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
-                    <div class="flex justify-between items-start">
+                <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded hover:shadow-md transition">
+                    <div class="flex justify-between items-start gap-4">
                         <div class="flex-1">
                             <p class="font-bold text-gray-800">\${s.plannerName}</p>
                             <p class="text-sm text-gray-600 mt-1">\${s.context.substring(0, 80)}...</p>
-                            <p class="text-xs text-gray-500 mt-2">\${new Date(s.sessionDate).toLocaleString('ko-KR')}</p>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-clock mr-1"></i>\${new Date(s.sessionDate).toLocaleString('ko-KR')}
+                            </p>
                         </div>
-                        <span class="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded">\${s.situationType}</span>
+                        <div class="flex flex-col gap-2 items-end">
+                            <span class="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded whitespace-nowrap">\${s.situationType}</span>
+                            <button onclick="openManagerAnalysis(\${s.id})" class="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded-lg hover:from-orange-600 hover:to-red-600 transition shadow-md whitespace-nowrap">
+                                <i class="fas fa-user-cog mr-1"></i>Manager 역할 분석
+                            </button>
+                        </div>
                     </div>
                 </div>
             \`).join('')
+        }
+        
+        // Manager 역할 분석 바로가기 (전체현황에서 호출)
+        function openManagerAnalysis(sessionId) {
+            // 1. 코칭 세션 관리 탭으로 전환
+            switchTab('sessions')
+            
+            // 2. 잠시 후 해당 세션의 Manager 역할 분석 모달 열기
+            setTimeout(() => {
+                openNoteModal(sessionId)
+            }, 100)
         }
         
         // 주의 필요 설계사 표시
