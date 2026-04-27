@@ -182,27 +182,41 @@ export function renderManagerPage(c: Context) {
                     <div id="modal-coachingAdvice" class="bg-green-50 border-l-4 border-green-500 p-4 rounded text-gray-800 whitespace-pre-wrap"></div>
                 </div>
                 
-                <!-- AI 생성된 Manager 추가 역할 -->
+                <!-- AI 생성된 Manager 추가 역할 (확대) -->
                 <div class="mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-semibold text-gray-700">
-                            <i class="fas fa-robot mr-2 text-orange-600"></i>AI 추천: Manager가 해야 할 추가 역할
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-lg font-bold text-gray-800">
+                            <i class="fas fa-robot mr-2 text-orange-600"></i>💡 AI 추천: Manager가 해야 할 추가 역할
                         </label>
-                        <button onclick="generateManagerAdvice()" id="generate-advice-btn" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition font-semibold text-sm shadow">
+                        <button onclick="generateManagerAdvice()" id="generate-advice-btn" class="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition font-bold shadow-lg">
                             <i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석 시작
                         </button>
                     </div>
-                    <div id="modal-managerAIAdvice" class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded text-gray-800 whitespace-pre-wrap min-h-[120px]">
-                        <p class="text-gray-500 italic">👆 'AI 분석 시작' 버튼을 클릭하면, 이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을 AI가 분석해드립니다.</p>
+                    <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-2 mb-2">
+                        <div class="bg-white rounded-lg p-3 text-sm text-gray-600">
+                            <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                            <span class="font-semibold">디렉터 업로드 자료(매니저용/공용)</span>와 <span class="font-semibold">외부 링크</span>를 참고하여, 설계사의 <span class="text-orange-600 font-bold">자존감 향상</span>과 <span class="text-orange-600 font-bold">구체적 실행</span>에 초점을 맞춘 코칭을 제공합니다.
+                        </div>
+                    </div>
+                    <div id="modal-managerAIAdvice" class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-400 p-6 rounded-xl text-gray-800 whitespace-pre-wrap min-h-[300px] max-h-[600px] overflow-y-auto shadow-inner">
+                        <p class="text-gray-500 italic text-center py-8">
+                            <i class="fas fa-lightbulb text-4xl text-orange-400 mb-4 block"></i>
+                            👆 <span class="font-bold">'AI 분석 시작'</span> 버튼을 클릭하면,<br>
+                            이 코칭 케이스에서 Manager가 추가로 수행해야 할 역할을<br>
+                            <span class="text-orange-600 font-bold">자존감 향상</span>과 <span class="text-orange-600 font-bold">구체적 실행</span> 중심으로 AI가 분석해드립니다.
+                        </p>
                     </div>
                 </div>
                 
-                <!-- 기존 내부 노트 (선택 사항) -->
+                <!-- AI 코칭 피드백 (용도 변경) -->
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-gray-600"></i>추가 메모 (선택사항, 설계사에게 비공개)
+                        <i class="fas fa-comments mr-2 text-blue-600"></i>AI 코칭 피드백 (선택사항)
                     </label>
-                    <textarea id="modal-managerNote" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="AI 분석 외 추가로 기록할 사항이 있다면 작성하세요."></textarea>
+                    <p class="text-xs text-gray-500 mb-2">
+                        💬 위 AI 추천 내용에 대한 피드백을 작성해주세요. 향후 AI 코칭 개선에 반영됩니다.
+                    </p>
+                    <textarea id="modal-managerNote" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="예: 'AI 추천이 매우 구체적이고 도움이 되었습니다' 또는 '좀 더 ~한 내용이 추가되면 좋겠습니다' 등"></textarea>
                 </div>
                 
                 <div class="flex gap-4">
