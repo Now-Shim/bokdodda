@@ -744,6 +744,7 @@ export function renderManagerPage(c: Context) {
         window.generateManagerAdvice = generateManagerAdvice
         window.submitManagerAction = submitManagerAction
         window.viewPlannerDetail = viewPlannerDetail
+        window.openManagerAnalysis = openManagerAnalysis
         
         // 자동 새로고침 (30초마다)
         let autoRefreshInterval = null
