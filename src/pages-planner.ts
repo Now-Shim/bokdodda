@@ -594,6 +594,9 @@ export const plannerPageHTML = `
             }
         }
         
+        // 전역 함수 등록 (HTML onclick에서 호출 가능하도록)
+        window.closeModal = closeModal
+        
         // 로그아웃 버튼 이벤트
         document.getElementById('logoutBtn').addEventListener('click', () => {
             if (confirm('로그아웃 하시겠습니까?')) {

@@ -1595,6 +1595,24 @@ export function renderDirectorPage(c: Context) {
             }
         }
         
+        // 전역 함수 등록 (HTML onclick에서 호출 가능하도록)
+        window.switchTab = switchTab
+        window.logout = logout
+        window.applyFilters = applyFilters
+        window.uploadKnowledge = uploadKnowledge
+        window.clearUploadForm = clearUploadForm
+        window.switchInputMode = switchInputMode
+        window.openSessionDetail = openSessionDetail
+        window.closeSessionModal = closeSessionModal
+        window.submitDirectorFeedback = submitDirectorFeedback
+        window.addExternalLink = addExternalLink
+        window.toggleLinkStatus = toggleLinkStatus
+        window.deleteLink = deleteLink
+        window.deleteKnowledge = deleteKnowledge
+        window.editKnowledge = editKnowledge
+        window.cancelEdit = cancelEdit
+        window.saveEdit = saveEdit
+        
         // 페이지 로드 시 초기화
         window.onload = () => {
             init()

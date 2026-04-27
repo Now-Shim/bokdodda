@@ -27,11 +27,32 @@ export function renderManagerPage(c: Context) {
                         <p class="text-gray-600 text-sm mt-1">설계사 코칭 모니터링 및 지원 시스템</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm text-gray-600">환영합니다, <span id="managerName" class="font-bold text-blue-600">관리자님</span></p>
-                    <button onclick="logout()" class="mt-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
-                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
-                    </button>
+                <div class="flex items-center gap-4">
+                    <!-- 알림 버튼 -->
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="relative px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+                            <i class="fas fa-bell text-lg"></i>
+                            <span id="notificationBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
+                        </button>
+                        
+                        <!-- 알림 드롭다운 -->
+                        <div id="notificationPanel" class="hidden absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                                <h3 class="font-bold text-gray-800">알림</h3>
+                                <button onclick="markAllAsRead()" class="text-xs text-blue-600 hover:text-blue-800">모두 읽음</button>
+                            </div>
+                            <div id="notificationList" class="divide-y divide-gray-100">
+                                <!-- 알림 목록이 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right">
+                        <p class="text-sm text-gray-600">환영합니다, <span id="managerName" class="font-bold text-blue-600">관리자님</span></p>
+                        <button onclick="logout()" class="mt-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -238,6 +259,8 @@ export function renderManagerPage(c: Context) {
         let currentUser = null
         let allSessions = []
         let allPlanners = []
+        let notifications = []
+        let notificationCheckInterval = null
         
         // 초기화
         async function init() {
@@ -263,6 +286,10 @@ export function renderManagerPage(c: Context) {
             await loadOverview()
             await loadSessions()
             await loadPlanners()
+            
+            // 알림 시스템 시작
+            startNotificationCheck()
+            
             console.log('[Manager] init 완료')
         }
         
@@ -729,8 +756,121 @@ export function renderManagerPage(c: Context) {
             document.getElementById(\`content-\${tab}\`).classList.remove('hidden')
         }
         
+        // ===== 알림 시스템 =====
+        
+        // 알림 조회
+        async function loadNotifications() {
+            if (!currentUser) return
+            
+            try {
+                const res = await axios.get('/api/notifications/' + currentUser.id)
+                notifications = res.data.notifications || []
+                const unreadCount = res.data.unreadCount || 0
+                
+                // 배지 업데이트
+                const badge = document.getElementById('notificationBadge')
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount
+                    badge.classList.remove('hidden')
+                } else {
+                    badge.classList.add('hidden')
+                }
+                
+                // 알림 목록 렌더링
+                displayNotifications()
+            } catch (error) {
+                console.error('[알림] 조회 실패:', error)
+            }
+        }
+        
+        // 알림 목록 표시
+        function displayNotifications() {
+            const container = document.getElementById('notificationList')
+            
+            if (notifications.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">새로운 알림이 없습니다</p>'
+                return
+            }
+            
+            container.innerHTML = notifications.map(n => \`
+                <div class="p-4 hover:bg-gray-50 cursor-pointer transition" onclick="handleNotificationClick(\${n.id}, \${n.session_id})">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-bell text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800 text-sm">\${n.title}</h4>
+                            <p class="text-gray-600 text-xs mt-1">\${n.message}</p>
+                            <p class="text-gray-400 text-xs mt-2">\${new Date(n.created_at).toLocaleString('ko-KR')}</p>
+                        </div>
+                    </div>
+                </div>
+            \`).join('')
+        }
+        
+        // 알림 패널 토글
+        function toggleNotifications() {
+            const panel = document.getElementById('notificationPanel')
+            panel.classList.toggle('hidden')
+            
+            if (!panel.classList.contains('hidden')) {
+                loadNotifications()
+            }
+        }
+        
+        // 알림 클릭 처리
+        async function handleNotificationClick(notificationId, sessionId) {
+            // 읽음 처리
+            try {
+                await axios.post('/api/notifications/' + notificationId + '/read')
+            } catch (error) {
+                console.error('[알림] 읽음 처리 실패:', error)
+            }
+            
+            // 알림 패널 닫기
+            document.getElementById('notificationPanel').classList.add('hidden')
+            
+            // 해당 세션으로 이동
+            if (sessionId) {
+                openManagerAnalysis(sessionId)
+            }
+            
+            // 알림 다시 로드
+            await loadNotifications()
+        }
+        
+        // 모두 읽음 처리
+        async function markAllAsRead() {
+            if (!currentUser) return
+            
+            try {
+                await axios.post('/api/notifications/read-all/' + currentUser.id)
+                await loadNotifications()
+            } catch (error) {
+                console.error('[알림] 전체 읽음 처리 실패:', error)
+            }
+        }
+        
+        // 알림 주기적 체크 (10초마다)
+        function startNotificationCheck() {
+            loadNotifications() // 즉시 한번 로드
+            notificationCheckInterval = setInterval(() => {
+                loadNotifications()
+            }, 10000) // 10초마다
+        }
+        
+        function stopNotificationCheck() {
+            if (notificationCheckInterval) {
+                clearInterval(notificationCheckInterval)
+                notificationCheckInterval = null
+            }
+        }
+        
         // 로그아웃
         function logout() {
+            stopNotificationCheck()
             localStorage.removeItem('user')
             window.location.href = '/'
         }
@@ -745,6 +885,9 @@ export function renderManagerPage(c: Context) {
         window.submitManagerAction = submitManagerAction
         window.viewPlannerDetail = viewPlannerDetail
         window.openManagerAnalysis = openManagerAnalysis
+        window.toggleNotifications = toggleNotifications
+        window.handleNotificationClick = handleNotificationClick
+        window.markAllAsRead = markAllAsRead
         
         // 자동 새로고침 (30초마다)
         let autoRefreshInterval = null

@@ -356,6 +356,30 @@ app.post('/api/coaching-sessions', async (c) => {
         aiResponse.tacitKnowledge || ''
       ).run()
       console.log('[DB] 세션 저장 성공:', newSession.id)
+      
+      // 알림 생성 (Manager와 Director에게)
+      const plannerName = user.name
+      const notificationMessage = `${plannerName} 설계사가 새로운 코칭을 요청했습니다: ${context.substring(0, 50)}...`
+      
+      // Manager에게 알림
+      const managerUser = users.find(u => u.role === 'manager')
+      if (managerUser) {
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (user_id, user_role, type, title, message, session_id)
+          VALUES (?, 'manager', 'new_session', '새 코칭 요청', ?, ?)
+        `).bind(managerUser.id, notificationMessage, newSession.id).run()
+      }
+      
+      // Director에게 알림
+      const directorUser = users.find(u => u.role === 'director')
+      if (directorUser) {
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (user_id, user_role, type, title, message, session_id)
+          VALUES (?, 'director', 'new_session', '새 코칭 요청', ?, ?)
+        `).bind(directorUser.id, notificationMessage, newSession.id).run()
+      }
+      
+      console.log('[알림] Manager/Director에게 알림 전송 완료')
     } catch (dbError) {
       console.error('[DB] 세션 저장 실패:', dbError)
       // DB 저장 실패해도 메모리에는 있으므로 계속 진행
@@ -642,6 +666,67 @@ app.get('/api/manager/planners', (c) => {
     })
   
   return c.json({ planners })
+})
+
+// 알림 - 읽지 않은 알림 조회 (Manager/Director)
+app.get('/api/notifications/:userId', async (c) => {
+  const { env } = c
+  const userId = parseInt(c.req.param('userId'))
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM notifications 
+      WHERE user_id = ? AND is_read = 0
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).bind(userId).all()
+    
+    return c.json({ 
+      notifications: result.results || [],
+      unreadCount: result.results?.length || 0
+    })
+  } catch (error) {
+    console.error('[Notifications] 조회 실패:', error)
+    return c.json({ notifications: [], unreadCount: 0 })
+  }
+})
+
+// 알림 - 읽음 처리
+app.post('/api/notifications/:id/read', async (c) => {
+  const { env } = c
+  const notificationId = parseInt(c.req.param('id'))
+  
+  try {
+    await env.DB.prepare(`
+      UPDATE notifications 
+      SET is_read = 1
+      WHERE id = ?
+    `).bind(notificationId).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('[Notifications] 읽음 처리 실패:', error)
+    return c.json({ error: '알림 처리 실패' }, 500)
+  }
+})
+
+// 알림 - 모두 읽음 처리
+app.post('/api/notifications/read-all/:userId', async (c) => {
+  const { env } = c
+  const userId = parseInt(c.req.param('userId'))
+  
+  try {
+    await env.DB.prepare(`
+      UPDATE notifications 
+      SET is_read = 1
+      WHERE user_id = ? AND is_read = 0
+    `).bind(userId).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('[Notifications] 전체 읽음 처리 실패:', error)
+    return c.json({ error: '알림 처리 실패' }, 500)
+  }
 })
 
 // 관리자 - 내부 노트 작성
