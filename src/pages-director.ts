@@ -279,7 +279,7 @@ export function renderDirectorPage(c: Context) {
                     <h4 class="text-lg font-bold text-gray-800 mb-4">
                         <i class="fas fa-database mr-2 text-blue-600"></i>업로드된 자료 목록
                     </h4>
-                    <div id="uploadedKnowledge" class="space-y-3">
+                    <div id="uploadedKnowledge" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200">
                         <p class="text-gray-500 text-center py-4">아직 업로드된 자료가 없습니다.</p>
                     </div>
                 </div>
