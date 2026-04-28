@@ -183,19 +183,23 @@ export function renderDirectorPage(c: Context) {
                 <p class="text-gray-600 mb-6">30년 현장 경험과 노하우를 축적하여 AI 코칭에 반영합니다.</p>
                 
                 <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">자료 제목</label>
-                    <input type="text" id="upload-title" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="예: 신규 고객 첫 만남 전략">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">해시태그</label>
+                    <input type="text" id="upload-title" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="예: #신규고객 #첫만남전략 #관계구축">
                 </div>
                 
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
                     <select id="upload-category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="영업기법">영업기법</option>
-                        <option value="고객관리">고객관리</option>
-                        <option value="상품지식">상품지식</option>
-                        <option value="클로징">클로징</option>
-                        <option value="관계구축">관계구축</option>
-                        <option value="기타">기타</option>
+                        <option value="영업기법">📈 영업기법 (프로세스)</option>
+                        <option value="고객관리">🤝 고객관리 (관계구축)</option>
+                        <option value="상품관련">📋 상품관련 (최신소식지)</option>
+                        <option value="인문학-철학">🎓 인문학 - 철학</option>
+                        <option value="인문학-심리학">🧠 인문학 - 심리학</option>
+                        <option value="인문학-행동경제학">💡 인문학 - 행동경제학</option>
+                        <option value="인문학-게임이론">🎯 인문학 - 게임이론</option>
+                        <option value="인문학-뇌과학">🧬 인문학 - 뇌과학</option>
+                        <option value="인문학-코칭이론">💬 인문학 - 코칭이론</option>
+                        <option value="기타">📝 기타 (칼럼 등)</option>
                     </select>
                 </div>
                 
@@ -465,11 +469,16 @@ export function renderDirectorPage(c: Context) {
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
                     <select id="edit-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                        <option value="영업기법">영업기법</option>
-                        <option value="상품지식">상품지식</option>
-                        <option value="고객관리">고객관리</option>
-                        <option value="클레임처리">클레임처리</option>
-                        <option value="기타">기타</option>
+                        <option value="영업기법">📈 영업기법 (프로세스)</option>
+                        <option value="고객관리">🤝 고객관리 (관계구축)</option>
+                        <option value="상품관련">📋 상품관련 (최신소식지)</option>
+                        <option value="인문학-철학">🎓 인문학 - 철학</option>
+                        <option value="인문학-심리학">🧠 인문학 - 심리학</option>
+                        <option value="인문학-행동경제학">💡 인문학 - 행동경제학</option>
+                        <option value="인문학-게임이론">🎯 인문학 - 게임이론</option>
+                        <option value="인문학-뇌과학">🧬 인문학 - 뇌과학</option>
+                        <option value="인문학-코칭이론">💬 인문학 - 코칭이론</option>
+                        <option value="기타">📝 기타 (칼럼 등)</option>
                     </select>
                 </div>
                 
