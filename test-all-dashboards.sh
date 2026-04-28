@@ -103,8 +103,9 @@ check_js_functions "Manager" "$BASE_URL/manager" \
     "generateManagerAdvice" "submitManagerAction" "openManagerAnalysis"
 
 check_js_functions "Director" "$BASE_URL/director" \
-    "switchTab" "logout" "applyFilters" "uploadKnowledge" \
-    "switchInputMode" "openSessionDetail" "closeSessionModal"
+    "switchTab" "logout" "applyFilters" "openFeedbackModal" \
+    "closeFeedbackModal" "submitFeedback" "uploadKnowledge" \
+    "openAddLinkModal" "toggleLinkStatus" "deleteKnowledge"
 
 check_js_functions "Planner" "$BASE_URL/planner" \
     "closeModal"
