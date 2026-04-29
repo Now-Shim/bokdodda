@@ -17,6 +17,7 @@
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
   },
   "dependencies": {
+    "@cloudflare/ai": "^1.2.2",
     "@google/generative-ai": "^0.21.0",
     "hono": "^4.11.6",
     "openai": "^6.17.0",

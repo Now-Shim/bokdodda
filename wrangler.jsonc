@@ -11,6 +11,9 @@
       "database_id": "local-webapp-production"
     }
   ],
+  "ai": {
+    "binding": "AI"
+  },
   "vars": {
     "GENSPARK_TOKEN": "76ikrNLufxO1nWFA7NWzNggaMKfvP573",
     "OPENAI_API_KEY": "76ikrNLufxO1nWFA7NWzNggaMKfvP573"

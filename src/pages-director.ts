@@ -1065,7 +1065,7 @@ export function renderDirectorPage(c: Context) {
             reader.readAsText(file, 'UTF-8')
         }
         
-        // PDF 파일에서 텍스트 추출
+        // PDF 파일에서 텍스트 추출 (텍스트 기반 PDF + OCR 지원)
         async function extractTextFromPDF(file) {
             try {
                 // PDF.js 라이브러리 확인
@@ -1081,11 +1081,11 @@ export function renderDirectorPage(c: Context) {
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
                 const pdf = await loadingTask.promise
                 
-                console.log('PDF 로드 성공. 총 페이지 수:', pdf.numPages)
+                console.log('[PDF] 로드 성공. 총 페이지 수:', pdf.numPages)
                 
                 let fullText = ''
                 
-                // 모든 페이지에서 텍스트 추출
+                // 모든 페이지에서 텍스트 추출 (텍스트 기반 PDF)
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const page = await pdf.getPage(pageNum)
                     const textContent = await page.getTextContent()
@@ -1098,7 +1098,39 @@ export function renderDirectorPage(c: Context) {
                     fullText += pageText + '\\n\\n'
                 }
                 
-                uploadedFileContent = fullText.trim()
+                fullText = fullText.trim()
+                
+                // 텍스트 추출 결과 확인
+                console.log('[PDF] 텍스트 기반 추출 결과: ' + fullText.length + ' 글자')
+                
+                // 텍스트가 거의 없으면 스캔 PDF일 가능성 → OCR 시도
+                if (fullText.length < 100) {
+                    console.log('[PDF] 텍스트가 거의 없음. OCR 처리 시작...')
+                    
+                    // 사용자에게 알림
+                    const useOCR = confirm(
+                        '이 PDF는 스캔본으로 보입니다. (텍스트 추출: ' + fullText.length + ' 글자)\\n\\n' +
+                        'AI OCR로 텍스트를 추출하시겠습니까?\\n\\n' +
+                        '※ OCR 처리는 1~2분 정도 소요될 수 있습니다.'
+                    )
+                    
+                    if (!useOCR) {
+                        alert('OCR 처리를 취소했습니다. 텍스트 기반 PDF를 업로드해주세요.')
+                        return
+                    }
+                    
+                    // OCR 처리 진행
+                    try {
+                        fullText = await extractTextWithOCR(file, pdf)
+                        console.log('[OCR] OCR 처리 완료: ' + fullText.length + ' 글자')
+                    } catch (ocrError) {
+                        console.error('[OCR] OCR 처리 실패:', ocrError)
+                        alert('OCR 처리 중 오류가 발생했습니다. 텍스트 기반 PDF를 사용해주세요.')
+                        return
+                    }
+                }
+                
+                uploadedFileContent = fullText
                 
                 // 미리보기 표시
                 document.getElementById('file-name').textContent = file.name + ' (PDF, ' + pdf.numPages + '페이지)'
@@ -1106,10 +1138,69 @@ export function renderDirectorPage(c: Context) {
                 document.getElementById('file-content-preview').textContent = uploadedFileContent.substring(0, 500) + (uploadedFileContent.length > 500 ? '...' : '')
                 document.getElementById('file-preview').classList.remove('hidden')
                 
-                console.log('PDF 텍스트 추출 완료. 총 문자 수:', uploadedFileContent.length)
+                console.log('[PDF] 최종 텍스트 추출 완료. 총 문자 수:', uploadedFileContent.length)
             } catch (error) {
-                console.error('PDF 텍스트 추출 실패:', error)
+                console.error('[PDF] 처리 실패:', error)
                 alert('PDF 파일 처리 중 오류가 발생했습니다: ' + error.message)
+            }
+        }
+        
+        // OCR로 PDF에서 텍스트 추출 (스캔본 PDF용)
+        async function extractTextWithOCR(file, pdfDoc) {
+            let allText = ''
+            
+            // 진행 상황 표시용
+            const statusDiv = document.createElement('div')
+            statusDiv.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg z-50'
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>OCR 처리 중... (0/' + pdfDoc.numPages + ' 페이지)'
+            document.body.appendChild(statusDiv)
+            
+            try {
+                // 각 페이지를 이미지로 변환하여 OCR 처리
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>OCR 처리 중... (' + pageNum + '/' + pdfDoc.numPages + ' 페이지)'
+                    
+                    const page = await pdfDoc.getPage(pageNum)
+                    
+                    // 페이지를 Canvas로 렌더링
+                    const scale = 2.0  // 고해상도로 렌더링 (OCR 정확도 향상)
+                    const viewport = page.getViewport({ scale })
+                    
+                    const canvas = document.createElement('canvas')
+                    const context = canvas.getContext('2d')
+                    canvas.width = viewport.width
+                    canvas.height = viewport.height
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise
+                    
+                    // Canvas를 Base64 이미지로 변환
+                    const imageData = canvas.toDataURL('image/png')
+                    
+                    // OCR API 호출
+                    const response = await axios.post('/api/ocr/extract', {
+                        imageData: imageData,
+                        fileName: file.name + ' (Page ' + pageNum + ')'
+                    })
+                    
+                    if (response.data.success && response.data.text) {
+                        allText += '\\n--- 페이지 ' + pageNum + ' ---\\n'
+                        allText += response.data.text + '\\n'
+                    }
+                    
+                    console.log('[OCR] 페이지 ' + pageNum + ' 처리 완료: ' + (response.data.text?.length || 0) + ' 글자')
+                }
+                
+                statusDiv.innerHTML = '<i class="fas fa-check mr-2"></i>OCR 완료!'
+                setTimeout(() => statusDiv.remove(), 2000)
+                
+                return allText.trim()
+                
+            } catch (error) {
+                statusDiv.remove()
+                throw error
             }
         }
         

@@ -960,6 +960,64 @@ app.post('/api/manager/action', async (c) => {
   }
 })
 
+// OCR - PDF/이미지에서 텍스트 추출 (Cloudflare Workers AI)
+app.post('/api/ocr/extract', async (c) => {
+  const { env } = c
+  
+  try {
+    const body = await c.req.json()
+    const { imageData, fileName } = body
+    
+    console.log(`[OCR] 텍스트 추출 시작: ${fileName}`)
+    
+    // Base64 이미지 데이터를 Uint8Array로 변환
+    const base64Data = imageData.split(',')[1] || imageData
+    const binaryString = atob(base64Data)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    
+    // Cloudflare Workers AI를 사용한 OCR 처리
+    // 현재 Cloudflare Workers AI는 직접 OCR 모델을 제공하지 않으므로
+    // 대안: 이미지를 Vision 모델로 분석하여 텍스트 추출
+    const ai = env.AI
+    if (!ai) {
+      console.log('[OCR] AI 바인딩을 사용할 수 없습니다. 기본 처리로 진행합니다.')
+      return c.json({ 
+        success: true, 
+        text: '', 
+        message: 'OCR 기능이 현재 사용 불가능합니다. 텍스트 기반 PDF를 사용해주세요.' 
+      })
+    }
+    
+    // Vision 모델을 사용하여 이미지에서 텍스트 추출
+    const response = await ai.run('@cf/llava-hf/llava-1.5-7b-hf', {
+      image: Array.from(bytes),
+      prompt: "이 이미지에 있는 모든 텍스트를 한글과 영어 그대로 정확하게 추출해주세요. 표, 목록, 제목 등 모든 내용을 포함하되, 추가 설명 없이 텍스트만 추출해주세요.",
+      max_tokens: 2048
+    })
+    
+    const extractedText = response.description || ''
+    
+    console.log(`[OCR] 텍스트 추출 완료: ${extractedText.length} 글자`)
+    
+    return c.json({ 
+      success: true, 
+      text: extractedText,
+      length: extractedText.length
+    })
+    
+  } catch (error) {
+    console.error('[OCR] 텍스트 추출 오류:', error)
+    return c.json({ 
+      success: false, 
+      error: 'OCR 처리 중 오류가 발생했습니다.',
+      details: error.message 
+    }, 500)
+  }
+})
+
 // Director - 자료 업로드
 app.post('/api/director/knowledge', async (c) => {
   const { title, category, content, priority, targetAudience, fileType, fileName, fileSize } = await c.req.json()
