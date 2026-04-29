@@ -463,44 +463,43 @@ export const plannerPageHTML = `
                             </form>
                         </div>
                         
-                        <!-- ===== 효과성 평가 (기존) ===== -->
-                        \${!session.effectivenessRating ? \`
-                            <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
-                                <h4 class="font-bold text-gray-800 mb-2">
-                                    <i class="fas fa-star text-yellow-500 mr-2"></i>코칭 효과성 평가
-                                </h4>
-                                <form id="feedbackForm" class="space-y-3">
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-1">효과성 평가</label>
-                                        <select id="rating" class="w-full px-3 py-2 border rounded-lg">
-                                            <option value="5">⭐⭐⭐⭐⭐ 매우 도움됨</option>
-                                            <option value="4">⭐⭐⭐⭐ 도움됨</option>
-                                            <option value="3">⭐⭐⭐ 보통</option>
-                                            <option value="2">⭐⭐ 별로</option>
-                                            <option value="1">⭐ 도움 안됨</option>
-                                        </select>
+                        <!-- ===== 효과성 평가 (항상 표시) ===== -->
+                        <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <h4 class="font-bold text-gray-800 mb-2">
+                                <i class="fas fa-star text-yellow-500 mr-2"></i>코칭 효과성 평가
+                            </h4>
+                            
+                            \${session.effectivenessRating ? \`
+                                <div class="bg-green-50 p-3 rounded-lg border border-green-200 mb-3">
+                                    <p class="text-sm text-green-800 mb-1">✅ 평가 완료 (아래에서 수정 가능)</p>
+                                    <div class="flex items-center text-yellow-500 mb-1">
+                                        \${'<i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
                                     </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-1">후기 (선택)</label>
-                                        <textarea id="feedback" rows="2" class="w-full px-3 py-2 border rounded-lg" 
-                                            placeholder="코칭이 도움이 되었는지, 개선할 점이 있다면 알려주세요."></textarea>
-                                    </div>
-                                    <button type="submit" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90">
-                                        <i class="fas fa-check mr-2"></i>평가 제출
-                                    </button>
-                                </form>
-                            </div>
-                        \` : \`
-                            <div class="bg-green-100 p-4 rounded-lg">
-                                <h4 class="font-bold text-green-800 mb-2">
-                                    <i class="fas fa-check-circle mr-2"></i>내 평가
-                                </h4>
-                                <div class="flex items-center text-yellow-500 mb-2">
-                                    \${'<i class="fas fa-star"></i>'.repeat(session.effectivenessRating)}
+                                    \${session.plannerFeedback ? \`<p class="text-sm text-gray-700 mt-1">"\${session.plannerFeedback}"</p>\` : ''}
                                 </div>
-                                <p class="text-gray-700">\${session.plannerFeedback || '(후기 없음)'}</p>
-                            </div>
-                        \`}
+                            \` : ''}
+                            
+                            <form id="feedbackForm" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">효과성 평가</label>
+                                    <select id="rating" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="5" \${session.effectivenessRating === 5 ? 'selected' : ''}>⭐⭐⭐⭐⭐ 매우 도움됨</option>
+                                        <option value="4" \${session.effectivenessRating === 4 ? 'selected' : ''}>⭐⭐⭐⭐ 도움됨</option>
+                                        <option value="3" \${session.effectivenessRating === 3 ? 'selected' : ''}>⭐⭐⭐ 보통</option>
+                                        <option value="2" \${session.effectivenessRating === 2 ? 'selected' : ''}>⭐⭐ 별로</option>
+                                        <option value="1" \${session.effectivenessRating === 1 ? 'selected' : ''}>⭐ 도움 안됨</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">후기 (선택)</label>
+                                    <textarea id="feedback" rows="2" class="w-full px-3 py-2 border rounded-lg" 
+                                        placeholder="코칭이 도움이 되었는지, 개선할 점이 있다면 알려주세요.">\${session.plannerFeedback || ''}</textarea>
+                                </div>
+                                <button type="submit" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90" id="submitFeedbackBtn">
+                                    <i class="fas fa-check mr-2"></i>\${session.effectivenessRating ? '평가 수정' : '평가 제출'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 \`
                 
@@ -535,46 +534,57 @@ export const plannerPageHTML = `
                     })
                 }, 100)
                 
-                // 피드백 폼 이벤트 리스너 (중복 방지)
-                if (!session.effectivenessRating) {
-                    setTimeout(() => {
-                        const form = document.getElementById('feedbackForm')
-                        if (form) {
-                            // 기존 이벤트 리스너 제거를 위해 새 폼으로 교체
-                            const newForm = form.cloneNode(true)
-                            form.parentNode.replaceChild(newForm, form)
+                // 피드백 폼 이벤트 리스너 (항상 등록, 중복 방지 개선)
+                setTimeout(() => {
+                    const form = document.getElementById('feedbackForm')
+                    if (form && !form.dataset.listenerAdded) {
+                        // 중복 등록 방지 플래그
+                        form.dataset.listenerAdded = 'true'
+                        
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault()
                             
-                            // 새 이벤트 리스너 추가
-                            newForm.addEventListener('submit', async (e) => {
-                                e.preventDefault()
+                            const submitBtn = document.getElementById('submitFeedbackBtn')
+                            
+                            // 중복 제출 방지
+                            if (submitBtn.disabled) {
+                                console.log('[Feedback] 이미 제출 중입니다.')
+                                return
+                            }
+                            
+                            submitBtn.disabled = true
+                            const originalText = submitBtn.innerHTML
+                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>제출 중...'
+                            
+                            const rating = parseInt(document.getElementById('rating').value)
+                            const feedback = document.getElementById('feedback').value.trim()
+                            
+                            console.log(\`[Feedback] 평가 제출 시작: 세션 \${id}, 평점 \${rating}점\`)
+                            
+                            try {
+                                const response = await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
+                                    effectivenessRating: rating,
+                                    feedback
+                                })
                                 
-                                // 중복 제출 방지
-                                const submitBtn = e.target.querySelector('button[type="submit"]')
-                                if (submitBtn.disabled) return
-                                submitBtn.disabled = true
-                                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>제출 중...'
+                                console.log('[Feedback] 평가 제출 성공:', response.data)
+                                alert('피드백이 성공적으로 등록되었습니다! ✅')
+                                closeModal()
+                                await loadSessions()
+                            } catch (error) {
+                                console.error('[Feedback] 평가 제출 오류:', error)
+                                console.error('[Feedback] 오류 상세:', error.response?.data || error.message)
+                                alert(\`평가 제출에 실패했습니다. ❌\\n\${error.response?.data?.error || error.message}\`)
                                 
-                                const rating = parseInt(document.getElementById('rating').value)
-                                const feedback = document.getElementById('feedback').value
-                                
-                                try {
-                                    await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
-                                        effectivenessRating: rating,
-                                        feedback
-                                    })
-                                    alert('피드백이 등록되었습니다!')
-                                    closeModal()
-                                    await loadSessions()
-                                } catch (error) {
-                                    console.error('피드백 제출 오류:', error)
-                                    alert('오류가 발생했습니다.')
-                                    submitBtn.disabled = false
-                                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>평가 제출'
-                                }
-                            })
-                        }
-                    }, 150)
-                }
+                                // 오류 시 버튼 복구
+                                submitBtn.disabled = false
+                                submitBtn.innerHTML = originalText
+                            }
+                        })
+                        
+                        console.log(\`[Feedback] 세션 \${id} 평가 폼 이벤트 리스너 등록 완료\`)
+                    }
+                }, 100)
                 
                 document.getElementById('sessionModal').classList.remove('hidden')
         }
