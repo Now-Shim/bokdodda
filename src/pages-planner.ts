@@ -535,24 +535,45 @@ export const plannerPageHTML = `
                     })
                 }, 100)
                 
+                // 피드백 폼 이벤트 리스너 (중복 방지)
                 if (!session.effectivenessRating) {
-                    document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
-                        e.preventDefault()
-                        const rating = parseInt(document.getElementById('rating').value)
-                        const feedback = document.getElementById('feedback').value
-                        
-                        try {
-                            await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
-                                effectivenessRating: rating,
-                                feedback
+                    setTimeout(() => {
+                        const form = document.getElementById('feedbackForm')
+                        if (form) {
+                            // 기존 이벤트 리스너 제거를 위해 새 폼으로 교체
+                            const newForm = form.cloneNode(true)
+                            form.parentNode.replaceChild(newForm, form)
+                            
+                            // 새 이벤트 리스너 추가
+                            newForm.addEventListener('submit', async (e) => {
+                                e.preventDefault()
+                                
+                                // 중복 제출 방지
+                                const submitBtn = e.target.querySelector('button[type="submit"]')
+                                if (submitBtn.disabled) return
+                                submitBtn.disabled = true
+                                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>제출 중...'
+                                
+                                const rating = parseInt(document.getElementById('rating').value)
+                                const feedback = document.getElementById('feedback').value
+                                
+                                try {
+                                    await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
+                                        effectivenessRating: rating,
+                                        feedback
+                                    })
+                                    alert('피드백이 등록되었습니다!')
+                                    closeModal()
+                                    await loadSessions()
+                                } catch (error) {
+                                    console.error('피드백 제출 오류:', error)
+                                    alert('오류가 발생했습니다.')
+                                    submitBtn.disabled = false
+                                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>평가 제출'
+                                }
                             })
-                            alert('피드백이 등록되었습니다!')
-                            closeModal()
-                            loadSessions()
-                        } catch (error) {
-                            alert('오류가 발생했습니다.')
                         }
-                    })
+                    }, 150)
                 }
                 
                 document.getElementById('sessionModal').classList.remove('hidden')
