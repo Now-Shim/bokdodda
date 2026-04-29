@@ -394,18 +394,36 @@ app.post('/api/coaching-sessions', async (c) => {
 
 // 코칭 세션 피드백 제출
 app.post('/api/coaching-sessions/:id/feedback', async (c) => {
+  const { env } = c
   const id = parseInt(c.req.param('id'))
   const { effectivenessRating, feedback } = await c.req.json()
   
-  const session = coachingSessions.find(s => s.id === id)
-  if (!session) {
-    return c.json({ error: '세션을 찾을 수 없습니다.' }, 404)
+  try {
+    // D1 데이터베이스에 피드백 저장
+    await env.DB.prepare(`
+      UPDATE coaching_sessions 
+      SET effectiveness_rating = ?, 
+          planner_feedback = ?
+      WHERE id = ?
+    `).bind(effectivenessRating, feedback, id).run()
+    
+    // 메모리에 있는 세션도 업데이트
+    const session = coachingSessions.find(s => s.id === id)
+    if (session) {
+      session.effectivenessRating = effectivenessRating
+      session.plannerFeedback = feedback
+    }
+    
+    console.log(`[Feedback] 세션 ${id} 피드백 저장 완료: ${effectivenessRating}점`)
+    
+    return c.json({ 
+      success: true, 
+      session: session || { id, effectivenessRating, plannerFeedback: feedback }
+    })
+  } catch (error) {
+    console.error('[Feedback] 저장 실패:', error)
+    return c.json({ error: '피드백 저장에 실패했습니다.' }, 500)
   }
-  
-  session.effectivenessRating = effectivenessRating
-  session.plannerFeedback = feedback
-  
-  return c.json({ success: true, session })
 })
 
 // 코칭 세션 대화 (추가 질문)
