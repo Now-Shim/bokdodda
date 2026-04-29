@@ -240,7 +240,7 @@ export function renderDirectorPage(c: Context) {
                             <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 transition">
                                 <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
                                 <p class="text-gray-600">클릭하여 파일을 선택하세요</p>
-                                <p class="text-sm text-gray-400 mt-1">지원 형식: .txt (UTF-8), .pdf (최대 20MB)</p>
+                                <p class="text-sm text-gray-400 mt-1">지원 형식: .txt (UTF-8), .pdf (최대 50MB)</p>
                             </div>
                             <input type="file" id="file-input" accept=".txt,.pdf" class="hidden" onchange="handleFileUpload(event)">
                         </label>
@@ -1030,9 +1030,9 @@ export function renderDirectorPage(c: Context) {
                 return
             }
             
-            // 파일 크기 확인 (20MB 제한 - PDF용)
-            if (file.size > 20 * 1024 * 1024) {
-                alert('파일 크기는 20MB를 초과할 수 없습니다.')
+            // 파일 크기 확인 (50MB 제한 - PDF용)
+            if (file.size > 50 * 1024 * 1024) {
+                alert('파일 크기는 50MB를 초과할 수 없습니다.')
                 event.target.value = ''
                 return
             }
