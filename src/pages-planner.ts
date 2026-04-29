@@ -558,11 +558,12 @@ export const plannerPageHTML = `
                             
                             const rating = parseInt(document.getElementById('rating').value)
                             const feedback = document.getElementById('feedback').value.trim()
+                            const sessionId = session.id  // 명시적으로 session.id 사용
                             
-                            console.log(\`[Feedback] 평가 제출 시작: 세션 \${id}, 평점 \${rating}점\`)
+                            console.log(\`[Feedback] 평가 제출 시작: 세션 \${sessionId}, 평점 \${rating}점\`)
                             
                             try {
-                                const response = await axios.post(\`/api/coaching-sessions/\${id}/feedback\`, {
+                                const response = await axios.post(\`/api/coaching-sessions/\${sessionId}/feedback\`, {
                                     effectivenessRating: rating,
                                     feedback
                                 })
