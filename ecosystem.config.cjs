@@ -14,13 +14,14 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       
-      // 🛡️ 안정성 개선 설정
-      max_memory_restart: '300M',     // 300MB 초과시 자동 재시작 (메모리 누수 방지)
-      kill_timeout: 5000,             // 강제 종료 전 5초 대기
-      restart_delay: 3000,            // 재시작 전 3초 대기
+      // 🛡️ 안정성 개선 설정 (강화)
+      max_memory_restart: '400M',     // 400MB 초과시 자동 재시작 (여유 확보)
+      kill_timeout: 10000,            // 강제 종료 전 10초 대기 (DB 연결 정리)
+      restart_delay: 5000,            // 재시작 전 5초 대기 (안정성 향상)
       autorestart: true,              // 비정상 종료시 자동 재시작
-      max_restarts: 10,               // 1분 내 최대 10회 재시작
-      min_uptime: '10s',              // 10초 이상 실행되어야 정상으로 간주
+      max_restarts: 15,               // 1분 내 최대 15회 재시작 (재시도 횟수 증가)
+      min_uptime: '15s',              // 15초 이상 실행되어야 정상으로 간주
+      exp_backoff_restart_delay: 100, // 재시작 간격 지수 증가 (100ms 시작)
       
       // 📝 로그 관리
       error_file: '/home/user/.pm2/logs/webapp-error.log',
