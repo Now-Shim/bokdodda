@@ -1,0 +1,14 @@
+name = "bukdotda"
+compatibility_date = "2026-01-27"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "b77e220e110e4c43cffb8e48a594ce1b"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bukdotda-production"
+database_id = "e3b1f751-5a3e-4b17-9b2b-a783406d8477"
+
+[observability]
+enabled = true
