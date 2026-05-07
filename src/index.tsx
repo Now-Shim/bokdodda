@@ -881,7 +881,7 @@ ${linksResult.results.map((link: any) => `- ${link.title}: ${link.url}`).join('\
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-mini',
           messages: [{
             role: 'user',
             content: managerPrompt
