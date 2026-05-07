@@ -814,10 +814,10 @@ app.post('/api/manager/advice/:id', async (c) => {
       ORDER BY created_at DESC LIMIT 3
     `).all()
     
-    // OpenAI API 호출로 변경 (GEMINI_API_KEY 대신 OPENAI_API_KEY 사용)
-    const OPENAI_API_KEY = env.OPENAI_API_KEY
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured')
+    // Gemini API 사용 (설계사 AI 코칭과 동일한 방식)
+    const GEMINI_API_KEY = env.GEMINI_API_KEY
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
     }
     
     const managerPrompt = `당신은 30년 경력의 보험 설계사 조직 관리 전문가입니다.
@@ -871,43 +871,45 @@ ${linksResult.results.map((link: any) => `- ${link.title}: ${link.url}`).join('\
 - 제공된 자료에 없는 내용은 추측하지 말고 "추가 확인 필요" 또는 "전문가 상담 권장" 명시
 - 출처가 명확한 경우에만 구체적으로 제시하고, 불확실하면 일반적 표현 사용`
 
-    console.log('[Manager AI] OpenAI API 호출 시작...')
-    const openaiResponse = await fetch(
-      `${env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/chat/completions`,
+    console.log('[Manager AI] Gemini API 호출 시작...')
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5-mini',
-          messages: [{
-            role: 'user',
-            content: managerPrompt
+          contents: [{
+            parts: [{
+              text: managerPrompt
+            }]
           }],
-          temperature: 0.7,
-          max_tokens: 3000
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8000,
+            topP: 0.95,
+            topK: 40
+          }
         })
       }
     )
     
-    console.log('[Manager AI] OpenAI 응답 상태:', openaiResponse.status)
+    console.log('[Manager AI] Gemini 응답 상태:', geminiResponse.status)
     
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text()
-      console.error('[Manager AI] OpenAI API 에러:', errorText)
-      throw new Error(`OpenAI API 호출 실패: ${openaiResponse.status} - ${errorText}`)
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text()
+      console.error('[Manager AI] Gemini API 에러:', errorText)
+      throw new Error(`Gemini API 호출 실패: ${geminiResponse.status} - ${errorText}`)
     }
     
-    const openaiData = await openaiResponse.json()
-    console.log('[Manager AI] 전체 OpenAI 응답:', JSON.stringify(openaiData, null, 2))
+    const geminiData = await geminiResponse.json()
     
     // finish_reason 확인
-    const finishReason = openaiData.choices?.[0]?.finish_reason
+    const finishReason = geminiData.candidates?.[0]?.finishReason
     console.log('[Manager AI] Finish Reason:', finishReason)
     
-    const advice = openaiData.choices?.[0]?.message?.content || 'AI 분석을 생성할 수 없습니다.'
+    const advice = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 분석을 생성할 수 없습니다.'
     console.log('[Manager AI] 생성된 조언 길이:', advice.length)
     console.log('[Manager AI] 생성된 조언 전체:\n', advice)
     
