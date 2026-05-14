@@ -1021,6 +1021,167 @@ app.post('/api/ocr/extract', async (c) => {
   }
 })
 
+// 성향 분석 API
+app.post('/api/personality-analysis', async (c) => {
+  const { plannerId, answers } = await c.req.json()
+  const { env } = c
+  
+  try {
+    console.log('[성향 분석] 시작 - 설계사 ID:', plannerId)
+    
+    // 성향 분석 (1~5점 척도)
+    const energyDirection = answers.q1 <= 2 ? 'E (외향)' : answers.q1 >= 4 ? 'I (내향)' : 'E/I (중간형)'
+    const informationProcessing = answers.q2 <= 2 ? 'S (감각)' : answers.q2 >= 4 ? 'N (직관)' : 'S/N (중간형)'
+    const decisionMaking = answers.q3 <= 2 ? 'T (사고)' : answers.q3 >= 4 ? 'F (감정)' : 'T/F (중간형)'
+    const achievementMotivation = answers.q4 <= 2 ? '도파민형' : answers.q4 >= 4 ? '세로토닌형' : '균형형'
+    const stressRecovery = answers.q5 <= 2 ? '회복탄력성 우수' : answers.q5 >= 4 ? '불안 민감형' : '보통'
+    const professionalPreference = answers.q6 <= 2 ? '학구파' : answers.q6 >= 4 ? '현장파' : '균형형'
+    
+    // 종합 성향 타입
+    let personalityType = ''
+    if (energyDirection.includes('E')) personalityType += 'E'
+    else if (energyDirection.includes('I')) personalityType += 'I'
+    else personalityType += 'X'
+    
+    if (informationProcessing.includes('S')) personalityType += 'S'
+    else if (informationProcessing.includes('N')) personalityType += 'N'
+    else personalityType += 'X'
+    
+    if (decisionMaking.includes('T')) personalityType += 'T'
+    else if (decisionMaking.includes('F')) personalityType += 'F'
+    else personalityType += 'X'
+    
+    personalityType += ` / ${achievementMotivation} / ${professionalPreference}`
+    
+    // Gemini API를 사용한 상세 성향 분석
+    const GEMINI_API_KEY = env.GEMINI_API_KEY
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+    
+    const analysisPrompt = `보험 설계사의 성향 테스트 결과를 분석하여 성향 Report를 작성해주세요.
+
+**테스트 결과:**
+- Q1. 에너지 방향: ${answers.q1}점 (1=외향, 5=내향) → ${energyDirection}
+- Q2. 정보 인식: ${answers.q2}점 (1=감각, 5=직관) → ${informationProcessing}
+- Q3. 의사 결정: ${answers.q3}점 (1=사고, 5=감정) → ${decisionMaking}
+- Q4. 성취 동기: ${answers.q4}점 (1=도파민, 5=세로토닌) → ${achievementMotivation}
+- Q5. 스트레스 회복: ${answers.q5}점 (1=회복탄력성, 5=불안민감) → ${stressRecovery}
+- Q6. 전문성 선호: ${answers.q6}점 (1=학구파, 5=현장파) → ${professionalPreference}
+
+**종합 성향 타입:** ${personalityType}
+
+**다음 형식으로 상세 분석을 작성해주세요:**
+
+1. **강점** (200-300자):
+이 설계사의 성향이 보험 영업에서 어떤 장점으로 작용하는지 구체적으로 설명
+
+2. **추천 영업 스타일** (300-400자):
+이 성향에 가장 적합한 영업 방식, 고객 접근법, 상담 스타일 등을 구체적으로 제시
+
+3. **주의할 점** (200-300자):
+이 성향이 가진 약점이나 주의해야 할 함정, 피해야 할 상황
+
+4. **성장 방향** (300-400자):
+장기적으로 이 설계사가 발전하기 위해 필요한 역량, 보완해야 할 부분, 추천 교육
+
+**중요:**
+- 보험 영업 현장에 직접 적용 가능한 실용적인 조언
+- 긍정적이면서도 현실적인 톤
+- 구체적인 예시와 행동 가이드 포함`
+
+    console.log('[성향 분석] Gemini API 호출 시작...')
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: analysisPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4000,
+            topP: 0.95,
+            topK: 40
+          }
+        })
+      }
+    )
+    
+    console.log('[성향 분석] Gemini 응답 상태:', geminiResponse.status)
+    
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text()
+      console.error('[성향 분석] Gemini API 에러:', errorText)
+      throw new Error(`Gemini API 호출 실패: ${geminiResponse.status}`)
+    }
+    
+    const geminiData = await geminiResponse.json()
+    const analysisText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    
+    console.log('[성향 분석] AI 분석 완료:', analysisText.substring(0, 200))
+    
+    // AI 응답 파싱
+    const parseSection = (text: string, keyword: string) => {
+      const regex = new RegExp(`${keyword}[:\\s*]+([\\s\\S]*?)(?=\\n\\n|\\d+\\.|\\*\\*|$)`, 'i')
+      const match = text.match(regex)
+      return match ? match[1].trim() : ''
+    }
+    
+    const strengths = parseSection(analysisText, '강점') || parseSection(analysisText, '1.') || '분석 중...'
+    const recommendedStyle = parseSection(analysisText, '추천 영업 스타일') || parseSection(analysisText, '2.') || '분석 중...'
+    const cautions = parseSection(analysisText, '주의할 점') || parseSection(analysisText, '3.') || '분석 중...'
+    const growthDirection = parseSection(analysisText, '성장 방향') || parseSection(analysisText, '4.') || '분석 중...'
+    
+    const report = {
+      personalityType,
+      energyDirection,
+      informationProcessing,
+      decisionMaking,
+      achievementMotivation,
+      stressRecovery,
+      professionalPreference,
+      strengths,
+      recommendedStyle,
+      cautions,
+      growthDirection,
+      rawAnalysis: analysisText
+    }
+    
+    // DB에 성향 분석 결과 저장
+    await env.DB.prepare(`
+      UPDATE planner_profiles 
+      SET personality_type = ?, sales_style = ?
+      WHERE user_id = ?
+    `).bind(
+      personalityType,
+      recommendedStyle.substring(0, 200),
+      plannerId
+    ).run()
+    
+    console.log('[성향 분석] 완료 및 저장 성공')
+    
+    return c.json({ 
+      success: true, 
+      report
+    })
+    
+  } catch (error) {
+    console.error('[성향 분석] 오류:', error)
+    return c.json({ 
+      success: false, 
+      error: '성향 분석 중 오류가 발생했습니다.',
+      details: error.message 
+    }, 500)
+  }
+})
+
 // Director - 자료 업로드
 app.post('/api/director/knowledge', async (c) => {
   const { title, category, content, priority, targetAudience, fileType, fileName, fileSize } = await c.req.json()

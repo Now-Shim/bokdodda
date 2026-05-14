@@ -41,7 +41,24 @@ export const plannerPageHTML = `
             <h2 class="text-2xl font-bold text-gray-800 mb-4">
                 <i class="fas fa-user-circle mr-2 text-purple-600"></i>내 프로필
             </h2>
-            <div id="profileInfo" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            <div id="profileInfo" class="cursor-pointer hover:shadow-md transition-all" onclick="openPersonalityTest()">
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border-2 border-purple-200 hover:border-purple-400">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-2">성향 분석</p>
+                            <p id="personalityStatus" class="font-bold text-purple-700 text-lg">클릭하여 성향 테스트 시작</p>
+                        </div>
+                        <div class="text-4xl text-purple-600">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                    </div>
+                    <div id="personalityReport" class="hidden mt-4">
+                        <button onclick="event.stopPropagation(); viewPersonalityReport()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                            <i class="fas fa-file-alt mr-2"></i>성향 Report 보기
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -86,6 +103,174 @@ export const plannerPageHTML = `
         </div>
     </div>
     
+    <!-- 성향 테스트 모달 -->
+    <div id="personalityTestModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-brain mr-2 text-purple-600"></i>성향 파악 테스트
+                    </h3>
+                    <button onclick="closePersonalityTest()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-6">각 질문에 대해 1~5점으로 평가해주세요. (1점: 왼쪽 선택지에 가까움 / 5점: 오른쪽 선택지에 가까움)</p>
+                
+                <form id="personalityTestForm" class="space-y-6">
+                    <!-- Q1 -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q1. [에너지 방향] 모처럼 만난 잠재 고객이 "보험의 '보'자도 꺼내지 마라"며 5분 만에 대화를 끝냈습니다. 사무실로 돌아오는 길에 당신은?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(E) 동료에게 전화해 방금 겪은 황당한 일을 수다 떨며 털어버리고, 바로 다음 고객을 방문할 계획을 세운다.</div>
+                            <div class="bg-green-50 p-3 rounded">(I) 조용한 곳에서 혼자 마음을 추스르며, 왜 거절당했는지 대화 내용을 복기하고 다시 나갈 에너지를 모은다.</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">E (외향)</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q1" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q1" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q1" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q1" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q1" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">I (내향)</span>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q2. [정보 인식] 새로운 암 보험 상품을 공부할 때, 당신의 눈에 먼저 들어오는 것은?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(S) 면책 기간, 감액 지급 규정, 정확한 보험료 구간 등 구체적인 약관 세부 내용.</div>
+                            <div class="bg-green-50 p-3 rounded">(N) 이 상품이 고객의 인생 주기에서 어떤 의미를 갖는지, 그리고 이 보장으로 얻게 될 평화로운 미래의 모습.</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">S (감각)</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q2" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q2" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q2" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q2" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q2" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">N (직관)</span>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q3. [의사 결정] 계약을 고민하는 고객에게 마지막 한마디를 던진다면?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(T) "이 상품은 타사 대비 보장 범위가 30% 넓고, 가성비 면에서 현재 가장 논리적인 선택입니다."</div>
+                            <div class="bg-green-50 p-3 rounded">(F) "고객님, 제가 제 가족의 보험을 설계한다는 마음으로 정성을 다해 준비했습니다. 저를 믿고 맡겨주세요."</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">T (사고)</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q3" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q3" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q3" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q3" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q3" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">F (감정)</span>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="border-l-4 border-yellow-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q4. [성취 동기] 이번 달 마감 목표를 달성했을 때, 당신을 가장 기쁘게 하는 보상은?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(도파민) 시상대에 올라가 동료들의 박수를 받으며 받는 화려한 트로피와 고액 보너스.</div>
+                            <div class="bg-green-50 p-3 rounded">(세로토닌) 마감을 무사히 마쳤다는 안도감과 함께 사랑하는 가족과 보내는 평온하고 따뜻한 저녁 시간.</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">도파민</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q4" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q4" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q4" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q4" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q4" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">세로토닌</span>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="border-l-4 border-red-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q5. [스트레스 회복력] 가입하기로 했던 고객이 갑자기 전화를 안 받고 잠수를 탔습니다. 당신의 상태는?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(회복탄력성) "바쁘신가 보네"라고 생각하며 크게 개의치 않고 다른 업무 리스트를 체크한다.</div>
+                            <div class="bg-green-50 p-3 rounded">(불안 민감도) "내가 실수를 했나?" 하는 생각에 온종일 일이 손에 잡히지 않고, 자꾸 휴대폰만 확인하게 된다.</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">회복탄력성</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q5" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q5" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q5" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q5" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q5" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">불안 민감도</span>
+                        </div>
+                    </div>
+
+                    <!-- Q6 -->
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h4 class="font-bold text-gray-800 mb-2">Q6. [전문성 선호도] 특별 교육이 있다면, 어떤 수업에 더 참여하고 싶습니까?</h4>
+                        <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">(학구파) 보험법의 변천사와 정밀한 약관 분석을 통해 전문가로서의 이론적 깊이를 채우는 수업.</div>
+                            <div class="bg-green-50 p-3 rounded">(현장파) 현장에서 바로 써먹을 수 있는 강력한 클로징 멘트와 고객 거절 처리 기법을 실전처럼 연습하는 수업.</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">학구파</span>
+                            <div class="flex space-x-2">
+                                <input type="radio" name="q6" value="1" required class="w-6 h-6"> <span class="text-xs">1</span>
+                                <input type="radio" name="q6" value="2" class="w-6 h-6"> <span class="text-xs">2</span>
+                                <input type="radio" name="q6" value="3" class="w-6 h-6"> <span class="text-xs">3</span>
+                                <input type="radio" name="q6" value="4" class="w-6 h-6"> <span class="text-xs">4</span>
+                                <input type="radio" name="q6" value="5" class="w-6 h-6"> <span class="text-xs">5</span>
+                            </div>
+                            <span class="text-sm text-gray-600">현장파</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4 mt-6">
+                        <button type="button" onclick="closePersonalityTest()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">
+                            취소
+                        </button>
+                        <button type="submit" id="savePersonalityBtn" class="gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90">
+                            <i class="fas fa-save mr-2"></i>저장 및 AI 분석
+                        </button>
+                        <span id="personalityLoading" class="hidden">
+                            <div class="loading"></div>
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 성향 Report 모달 -->
+    <div id="personalityReportModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-file-alt mr-2 text-purple-600"></i>성향 Report
+                    </h3>
+                    <button onclick="closePersonalityReport()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <div id="personalityReportContent"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="sessionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div class="p-6">
@@ -675,6 +860,148 @@ export const plannerPageHTML = `
                 window.location.href = '/'
             }
         })
+        
+        // 성향 테스트 관련 함수들
+        function openPersonalityTest() {
+            document.getElementById('personalityTestModal').classList.remove('hidden')
+        }
+        
+        function closePersonalityTest() {
+            document.getElementById('personalityTestModal').classList.add('hidden')
+        }
+        
+        function viewPersonalityReport() {
+            document.getElementById('personalityReportModal').classList.remove('hidden')
+        }
+        
+        function closePersonalityReport() {
+            document.getElementById('personalityReportModal').classList.add('hidden')
+        }
+        
+        // 성향 테스트 제출
+        document.getElementById('personalityTestForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            
+            const answers = {
+                q1: parseInt(document.querySelector('input[name="q1"]:checked').value),
+                q2: parseInt(document.querySelector('input[name="q2"]:checked').value),
+                q3: parseInt(document.querySelector('input[name="q3"]:checked').value),
+                q4: parseInt(document.querySelector('input[name="q4"]:checked').value),
+                q5: parseInt(document.querySelector('input[name="q5"]:checked').value),
+                q6: parseInt(document.querySelector('input[name="q6"]:checked').value)
+            }
+            
+            const saveBtn = document.getElementById('savePersonalityBtn')
+            const loading = document.getElementById('personalityLoading')
+            
+            saveBtn.disabled = true
+            loading.classList.remove('hidden')
+            
+            try {
+                const res = await axios.post('/api/personality-analysis', {
+                    plannerId: user.id,
+                    answers
+                }, {
+                    timeout: 60000
+                })
+                
+                if (res.data.success) {
+                    alert('성향 분석이 완료되었습니다!')
+                    closePersonalityTest()
+                    
+                    // 프로필 상태 업데이트
+                    document.getElementById('personalityStatus').textContent = '성향 분석 완료 ✓'
+                    document.getElementById('personalityReport').classList.remove('hidden')
+                    
+                    // Report 내용 저장
+                    window.personalityReportData = res.data.report
+                    
+                    // Report 모달 자동 표시
+                    displayPersonalityReport(res.data.report)
+                } else {
+                    throw new Error('성향 분석 실패')
+                }
+            } catch (error) {
+                alert('오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
+            } finally {
+                saveBtn.disabled = false
+                loading.classList.add('hidden')
+            }
+        })
+        
+        function displayPersonalityReport(report) {
+            const content = document.getElementById('personalityReportContent')
+            content.innerHTML = \`
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-r from-purple-100 to-blue-100 p-6 rounded-lg">
+                        <h4 class="text-xl font-bold text-purple-800 mb-2">종합 성향</h4>
+                        <p class="text-lg font-semibold text-gray-800">\${report.personalityType}</p>
+                    </div>
+                    
+                    <div class="bg-white border-2 border-purple-200 p-6 rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">
+                            <i class="fas fa-chart-bar mr-2 text-purple-600"></i>세부 분석
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">에너지 방향:</span>
+                                <span class="text-purple-700">\${report.energyDirection}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">정보 인식:</span>
+                                <span class="text-blue-700">\${report.informationProcessing}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">의사 결정:</span>
+                                <span class="text-green-700">\${report.decisionMaking}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">성취 동기:</span>
+                                <span class="text-yellow-700">\${report.achievementMotivation}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">스트레스 회복:</span>
+                                <span class="text-red-700">\${report.stressRecovery}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">전문성 선호:</span>
+                                <span class="text-indigo-700">\${report.professionalPreference}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">
+                            <i class="fas fa-star mr-2 text-yellow-500"></i>강점
+                        </h4>
+                        <p class="text-gray-700 whitespace-pre-wrap">\${report.strengths}</p>
+                    </div>
+                    
+                    <div class="bg-green-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">
+                            <i class="fas fa-lightbulb mr-2 text-green-600"></i>추천 영업 스타일
+                        </h4>
+                        <p class="text-gray-700 whitespace-pre-wrap">\${report.recommendedStyle}</p>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">
+                            <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>주의할 점
+                        </h4>
+                        <p class="text-gray-700 whitespace-pre-wrap">\${report.cautions}</p>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">
+                            <i class="fas fa-graduation-cap mr-2 text-purple-600"></i>성장 방향
+                        </h4>
+                        <p class="text-gray-700 whitespace-pre-wrap">\${report.growthDirection}</p>
+                    </div>
+                </div>
+            \`
+            
+            viewPersonalityReport()
+        }
         
         // 초기 데이터 로드
         console.log('[DEBUG] Starting initial data load...')
