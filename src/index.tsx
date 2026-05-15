@@ -726,8 +726,10 @@ app.get('/api/manager/planners', (c) => {
       
       // 경력 연수 자동 계산
       let experienceYears = 0
+      let experienceText = '미설정'
       if (profile?.careerStartYear) {
         experienceYears = currentYear - parseInt(profile.careerStartYear) + 1
+        experienceText = experienceYears + '년'
       }
       
       // 전문 분야 자동 판단 (생보/손보 비중 기반)
@@ -766,6 +768,7 @@ app.get('/api/manager/planners', (c) => {
         personalityType: profile?.personalityType || '미분석',
         salesStyle: salesStyle,
         experienceYears: experienceYears,
+        experienceText: experienceText,
         specialization: specialization,
         totalCoachingSessions: coachingSessions.filter(s => s.plannerId === u.id).length,
         totalTrainingCompleted: 0 // TODO: 교육 이수 기능 추가 시 계산

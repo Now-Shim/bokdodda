@@ -291,7 +291,7 @@ function displayPlanners(planners) {
                     </div>
                     <div>
                         <p class="text-gray-500">경력</p>
-                        <p class="font-bold text-gray-800">${p.experienceYears}년</p>
+                        <p class="font-bold text-gray-800">${p.experienceText || p.experienceYears + '년'}</p>
                     </div>
                     <div>
                         <p class="text-gray-500">전문 분야</p>
