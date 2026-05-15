@@ -91,16 +91,63 @@ app.post('/api/login', async (c) => {
 })
 
 // 설계사 프로필 조회
-app.get('/api/planner/:id', (c) => {
+app.get('/api/planner/:id', async (c) => {
+  const { env } = c
   const id = parseInt(c.req.param('id'))
-  const user = users.find(u => u.id === id && u.role === 'planner')
-  const profile = plannerProfiles.find(p => p.userId === id)
   
-  if (!user || !profile) {
-    return c.json({ error: '설계사를 찾을 수 없습니다.' }, 404)
+  try {
+    // D1에서 프로필 정보 조회
+    let profileResult = await env.DB.prepare(`
+      SELECT * FROM planner_profiles WHERE user_id = ?
+    `).bind(id).first()
+    
+    // 프로필이 없으면 자동 생성
+    if (!profileResult) {
+      await env.DB.prepare(`
+        INSERT INTO planner_profiles (user_id, personality_type, sales_style, experience_years, specialization)
+        VALUES (?, '미분석', '미설정', 0, '미설정')
+      `).bind(id).run()
+      
+      profileResult = await env.DB.prepare(`
+        SELECT * FROM planner_profiles WHERE user_id = ?
+      `).bind(id).first()
+    }
+    
+    const user = users.find(u => u.id === id && u.role === 'planner')
+    
+    const profile = {
+      userId: profileResult.user_id,
+      personalityType: profileResult.personality_type || '미분석',
+      energyDirection: profileResult.energy_direction,
+      informationProcessing: profileResult.information_processing,
+      decisionMaking: profileResult.decision_making,
+      achievementMotivation: profileResult.achievement_motivation,
+      stressRecovery: profileResult.stress_recovery,
+      professionalPreference: profileResult.professional_preference,
+      recommendedStyle: profileResult.recommended_style,
+      cautions: profileResult.cautions,
+      growthDirection: profileResult.growth_direction,
+      salesStyle: profileResult.sales_style || '미설정',
+      experienceYears: profileResult.experience_years || 0,
+      specialization: profileResult.specialization || '미설정',
+      strengths: profileResult.strengths,
+      weaknesses: profileResult.weaknesses,
+      totalCoachingSessions: profileResult.total_coaching_sessions || 0,
+      totalTrainingCompleted: profileResult.total_training_completed || 0,
+      careerStartYear: profileResult.career_start_year,
+      firstOrganization: profileResult.first_organization,
+      careerPath: profileResult.career_path,
+      productRatio: profileResult.product_ratio,
+      birthYear: profileResult.birth_year,
+      gender: profileResult.gender,
+      maritalStatus: profileResult.marital_status
+    }
+    
+    return c.json({ user, profile })
+  } catch (error) {
+    console.error('[프로필 조회] 오류:', error)
+    return c.json({ error: '프로필 조회 중 오류가 발생했습니다.' }, 500)
   }
-  
-  return c.json({ user, profile })
 })
 
 // 설계사별 코칭 세션 목록
@@ -1053,6 +1100,48 @@ app.post('/api/personality-analysis', async (c) => {
     
     personalityType += ` / ${achievementMotivation} / ${professionalPreference}`
     
+    // 디렉터가 업로드한 성향 분석 지식 로드
+    console.log('[성향 분석] 디렉터 지식 베이스 로드 중...')
+    let directorKnowledge = ''
+    try {
+      const knowledgeResult = await env.DB.prepare(`
+        SELECT title, content, personality_filter, priority 
+        FROM personality_knowledge 
+        WHERE target_audience IN ('planner', 'both')
+        AND (
+          personality_filter = 'ALL' 
+          OR personality_filter LIKE '%' || ? || '%'
+          OR personality_filter LIKE '%' || ? || '%'
+          OR personality_filter LIKE '%' || ? || '%'
+        )
+        ORDER BY priority DESC, created_at DESC
+        LIMIT 10
+      `).bind(personalityType, achievementMotivation, professionalPreference).all()
+      
+      if (knowledgeResult.results.length > 0) {
+        directorKnowledge = '\n\n**디렉터의 전문 지식 (참고):**\n'
+        knowledgeResult.results.forEach((k, index) => {
+          directorKnowledge += `\n${index + 1}. [${k.title}]\n${k.content}\n`
+        })
+        
+        // 활용 횟수 증가
+        for (const k of knowledgeResult.results) {
+          await env.DB.prepare(`
+            UPDATE personality_knowledge 
+            SET usage_count = usage_count + 1, last_used_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+          `).bind(k.id).run()
+        }
+        
+        console.log(`[성향 분석] ${knowledgeResult.results.length}개의 디렉터 지식 로드 완료`)
+      } else {
+        console.log('[성향 분석] 매칭되는 디렉터 지식이 없음')
+      }
+    } catch (knowledgeError) {
+      console.error('[성향 분석] 디렉터 지식 로드 오류:', knowledgeError)
+      // 지식 로드 실패해도 분석은 계속 진행
+    }
+    
     // Gemini API를 사용한 상세 성향 분석
     const GEMINI_API_KEY = env.GEMINI_API_KEY
     if (!GEMINI_API_KEY) {
@@ -1088,7 +1177,10 @@ app.post('/api/personality-analysis', async (c) => {
 **중요:**
 - 보험 영업 현장에 직접 적용 가능한 실용적인 조언
 - 긍정적이면서도 현실적인 톤
-- 구체적인 예시와 행동 가이드 포함`
+- 구체적인 예시와 행동 가이드 포함
+${directorKnowledge}
+
+**위 디렉터 지식을 참고하되, 분석 내용에 자연스럽게 녹여서 작성하세요. (디렉터 지식을 그대로 인용하지 말고, 내용을 이해한 후 통합하여 작성)**`
 
     console.log('[성향 분석] Gemini API 호출 시작...')
     const geminiResponse = await fetch(
@@ -1127,17 +1219,36 @@ app.post('/api/personality-analysis', async (c) => {
     
     console.log('[성향 분석] AI 분석 완료:', analysisText.substring(0, 200))
     
-    // AI 응답 파싱
+    // AI 응답 파싱 (개선된 정규식)
     const parseSection = (text: string, keyword: string) => {
-      const regex = new RegExp(`${keyword}[:\\s*]+([\\s\\S]*?)(?=\\n\\n|\\d+\\.|\\*\\*|$)`, 'i')
-      const match = text.match(regex)
-      return match ? match[1].trim() : ''
+      // 다양한 마크다운 형식 지원:
+      // 1. ### 1. 강점 (Strengths) 형식
+      // 2. **강점** 또는 **1. 강점** 형식
+      // 3. ## 강점 형식
+      const patterns = [
+        // ### 1. 강점 또는 ### 강점 형식 (가장 먼저 시도)
+        new RegExp(`###\\s*(?:\\d+\\.\\s*)?${keyword}[^\\n]*\\n+([\\s\\S]*?)(?=\\n###|\\n##|$)`, 'i'),
+        // **강점** 또는 **1. 강점** 형식
+        new RegExp(`\\*\\*(?:\\d+\\.\\s*)?${keyword}\\*\\*[:\\s]*([\\s\\S]*?)(?=\\n\\n\\*\\*|\\n###|$)`, 'i'),
+        // ## 강점 형식
+        new RegExp(`##\\s*(?:\\d+\\.\\s*)?${keyword}[^\\n]*\\n+([\\s\\S]*?)(?=\\n##|\\n###|$)`, 'i'),
+        // 1. 강점: 형식
+        new RegExp(`\\d+\\.\\s*${keyword}[:\\s]+([\\s\\S]*?)(?=\\n\\d+\\.|\\n###|$)`, 'i')
+      ]
+      
+      for (const regex of patterns) {
+        const match = text.match(regex)
+        if (match && match[1]?.trim()) {
+          return match[1].trim()
+        }
+      }
+      return ''
     }
     
-    const strengths = parseSection(analysisText, '강점') || parseSection(analysisText, '1.') || '분석 중...'
-    const recommendedStyle = parseSection(analysisText, '추천 영업 스타일') || parseSection(analysisText, '2.') || '분석 중...'
-    const cautions = parseSection(analysisText, '주의할 점') || parseSection(analysisText, '3.') || '분석 중...'
-    const growthDirection = parseSection(analysisText, '성장 방향') || parseSection(analysisText, '4.') || '분석 중...'
+    const strengths = parseSection(analysisText, '강점') || '분석 중...'
+    const recommendedStyle = parseSection(analysisText, '추천 영업 스타일') || '분석 중...'
+    const cautions = parseSection(analysisText, '주의할 점') || '분석 중...'
+    const growthDirection = parseSection(analysisText, '성장 방향') || '분석 중...'
     
     const report = {
       personalityType,
@@ -1154,14 +1265,33 @@ app.post('/api/personality-analysis', async (c) => {
       rawAnalysis: analysisText
     }
     
-    // DB에 성향 분석 결과 저장
+    // DB에 성향 분석 결과 저장 (모든 필드 저장)
     await env.DB.prepare(`
       UPDATE planner_profiles 
-      SET personality_type = ?, sales_style = ?
+      SET personality_type = ?, 
+          energy_direction = ?,
+          information_processing = ?,
+          decision_making = ?,
+          achievement_motivation = ?,
+          stress_recovery = ?,
+          professional_preference = ?,
+          strengths = ?,
+          recommended_style = ?,
+          cautions = ?,
+          growth_direction = ?
       WHERE user_id = ?
     `).bind(
       personalityType,
-      recommendedStyle.substring(0, 200),
+      energyDirection,
+      informationProcessing,
+      decisionMaking,
+      achievementMotivation,
+      stressRecovery,
+      professionalPreference,
+      strengths,
+      recommendedStyle,
+      cautions,
+      growthDirection,
       plannerId
     ).run()
     
@@ -1177,6 +1307,86 @@ app.post('/api/personality-analysis', async (c) => {
     return c.json({ 
       success: false, 
       error: '성향 분석 중 오류가 발생했습니다.',
+      details: error.message 
+    }, 500)
+  }
+})
+
+// 경력 정보 저장 API
+app.post('/api/planner/career', async (c) => {
+  const { plannerId, careerStartYear, firstOrganization, careerPath, productRatio } = await c.req.json()
+  const { env } = c
+  
+  try {
+    console.log('[경력 정보] 저장 시작 - 설계사 ID:', plannerId)
+    
+    await env.DB.prepare(`
+      UPDATE planner_profiles 
+      SET career_start_year = ?, 
+          first_organization = ?, 
+          career_path = ?, 
+          product_ratio = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `).bind(
+      careerStartYear,
+      firstOrganization,
+      careerPath,
+      productRatio,
+      plannerId
+    ).run()
+    
+    console.log('[경력 정보] 저장 완료')
+    
+    return c.json({ 
+      success: true,
+      message: '경력 정보가 저장되었습니다.'
+    })
+    
+  } catch (error) {
+    console.error('[경력 정보] 저장 오류:', error)
+    return c.json({ 
+      success: false, 
+      error: '경력 정보 저장 중 오류가 발생했습니다.',
+      details: error.message 
+    }, 500)
+  }
+})
+
+// 개인정보 저장 API
+app.post('/api/planner/personal-info', async (c) => {
+  const { plannerId, birthYear, gender, maritalStatus } = await c.req.json()
+  const { env } = c
+  
+  try {
+    console.log('[개인정보] 저장 시작 - 설계사 ID:', plannerId)
+    
+    await env.DB.prepare(`
+      UPDATE planner_profiles 
+      SET birth_year = ?, 
+          gender = ?, 
+          marital_status = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `).bind(
+      birthYear,
+      gender,
+      maritalStatus,
+      plannerId
+    ).run()
+    
+    console.log('[개인정보] 저장 완료')
+    
+    return c.json({ 
+      success: true,
+      message: '개인정보가 저장되었습니다.'
+    })
+    
+  } catch (error) {
+    console.error('[개인정보] 저장 오류:', error)
+    return c.json({ 
+      success: false, 
+      error: '개인정보 저장 중 오류가 발생했습니다.',
       details: error.message 
     }, 500)
   }
@@ -1695,6 +1905,281 @@ app.patch('/api/director/links/:id/toggle', async (c) => {
   } catch (error) {
     console.error('링크 상태 변경 오류:', error)
     return c.json({ error: '링크 상태 변경 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// ============== 성향 분석 지식 관리 API ==============
+
+// 성향 분석 지식 목록 조회
+app.get('/api/director/personality-knowledge', async (c) => {
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM personality_knowledge ORDER BY priority DESC, created_at DESC
+    `).all()
+    
+    const knowledge = result.results.map(row => ({
+      id: row.id,
+      category: row.category,
+      title: row.title,
+      content: row.content,
+      personalityFilter: row.personality_filter,
+      targetAudience: row.target_audience,
+      priority: row.priority,
+      usageCount: row.usage_count || 0,
+      lastUsedAt: row.last_used_at,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+    
+    return c.json({ success: true, knowledge })
+  } catch (error) {
+    console.error('성향 분석 지식 조회 오류:', error)
+    return c.json({ error: '성향 분석 지식 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 성향 분석 지식 추가
+app.post('/api/director/personality-knowledge', async (c) => {
+  const { title, category, content, personalityFilter, targetAudience, priority } = await c.req.json()
+  const { env } = c
+  
+  try {
+    // 현재 사용자 ID (임시로 1 사용, 실제로는 세션에서 가져와야 함)
+    const directorId = 1
+    
+    const result = await env.DB.prepare(`
+      INSERT INTO personality_knowledge 
+      (category, title, content, personality_filter, target_audience, priority, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      category,
+      title,
+      content,
+      personalityFilter || 'ALL',
+      targetAudience,
+      priority || 5,
+      directorId
+    ).run()
+    
+    return c.json({ success: true, id: result.meta.last_row_id })
+  } catch (error) {
+    console.error('성향 분석 지식 추가 오류:', error)
+    return c.json({ error: '성향 분석 지식 추가 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 성향 분석 지식 수정
+app.put('/api/director/personality-knowledge/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { title, category, content, personalityFilter, targetAudience, priority } = await c.req.json()
+  const { env } = c
+  
+  try {
+    await env.DB.prepare(`
+      UPDATE personality_knowledge 
+      SET title = ?, category = ?, content = ?, personality_filter = ?, 
+          target_audience = ?, priority = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      title,
+      category,
+      content,
+      personalityFilter || 'ALL',
+      targetAudience,
+      priority || 5,
+      id
+    ).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('성향 분석 지식 수정 오류:', error)
+    return c.json({ error: '성향 분석 지식 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 성향 분석 지식 삭제
+app.delete('/api/director/personality-knowledge/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const { env } = c
+  
+  try {
+    await env.DB.prepare(`
+      DELETE FROM personality_knowledge WHERE id = ?
+    `).bind(id).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('성향 분석 지식 삭제 오류:', error)
+    return c.json({ error: '성향 분석 지식 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// ============== 매니저 API ==============
+
+// 매니저: 설계사별 코칭 세션 조회
+app.get('/api/manager/planner-sessions/:plannerId', async (c) => {
+  const plannerId = parseInt(c.req.param('plannerId'))
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM coaching_sessions 
+      WHERE planner_id = ? 
+      ORDER BY session_date DESC
+    `).bind(plannerId).all()
+    
+    const sessions = result.results.map(row => ({
+      id: row.id,
+      plannerId: row.planner_id,
+      context: row.context,
+      situationType: row.situation_type,
+      coachingAdvice: row.coaching_advice,
+      sessionDate: row.session_date,
+      effectivenessRating: row.effectiveness_rating,
+      plannerFeedback: row.planner_feedback,
+      managerNote: row.manager_note,
+      managerAIAdvice: row.manager_ai_advice
+    }))
+    
+    return c.json({ success: true, sessions })
+  } catch (error) {
+    console.error('설계사 코칭 세션 조회 오류:', error)
+    return c.json({ error: '코칭 세션 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 매니저: 설계사 성향에 대한 매니저 의견 생성 (AI)
+app.post('/api/manager/generate-opinion', async (c) => {
+  const { 
+    plannerId, plannerName, personalityType, 
+    energyDirection, informationProcessing, decisionMaking,
+    achievementMotivation, stressRecovery, professionalPreference,
+    strengths, recommendedStyle, cautions, growthDirection
+  } = await c.req.json()
+  const { env } = c
+  
+  try {
+    console.log('[매니저 의견 생성] 시작 - 설계사:', plannerName)
+    
+    const GEMINI_API_KEY = env.GEMINI_API_KEY
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+    
+    // 디렉터 지식 베이스에서 매니저용 지식 로드
+    let managerKnowledge = ''
+    try {
+      const knowledgeResult = await env.DB.prepare(`
+        SELECT title, content, priority 
+        FROM personality_knowledge 
+        WHERE target_audience IN ('manager', 'both')
+        AND (
+          personality_filter = 'ALL' 
+          OR personality_filter LIKE '%' || ? || '%'
+          OR personality_filter LIKE '%' || ? || '%'
+          OR personality_filter LIKE '%' || ? || '%'
+        )
+        ORDER BY priority DESC, created_at DESC
+        LIMIT 5
+      `).bind(personalityType, achievementMotivation, professionalPreference).all()
+      
+      if (knowledgeResult.results.length > 0) {
+        managerKnowledge = '\n\n**디렉터의 전문 지식 (매니저용):**\n'
+        knowledgeResult.results.forEach((k, index) => {
+          managerKnowledge += `\n${index + 1}. [${k.title}]\n${k.content}\n`
+        })
+        console.log(`[매니저 의견] ${knowledgeResult.results.length}개의 디렉터 지식 로드 완료`)
+      }
+    } catch (knowledgeError) {
+      console.error('[매니저 의견] 디렉터 지식 로드 오류:', knowledgeError)
+    }
+    
+    const prompt = `보험 설계사 "${plannerName}"의 성향 분석 결과를 바탕으로, 매니저 시점에서의 관리 포인트를 작성해주세요.
+
+**설계사 성향 분석 결과:**
+- 종합 성향: ${personalityType}
+- 에너지 방향: ${energyDirection}
+- 정보 인식: ${informationProcessing}
+- 의사 결정: ${decisionMaking}
+- 성취 동기: ${achievementMotivation}
+- 스트레스 회복: ${stressRecovery}
+- 전문성 선호: ${professionalPreference}
+
+**AI 분석 요약:**
+- 강점: ${strengths}
+- 추천 영업 스타일: ${recommendedStyle}
+- 주의할 점: ${cautions}
+- 성장 방향: ${growthDirection}
+
+${managerKnowledge}
+
+**매니저 시점에서 다음 내용을 작성해주세요:**
+
+💼 **1. 매니저가 인지해야 할 이 설계사의 핵심 특성** (200-300자)
+이 설계사를 관리할 때 가장 중요하게 고려해야 할 성향적 특징
+
+📊 **2. 효과적인 커뮤니케이션 방법** (200-300자)
+이 설계사와 소통할 때 효과적인 방식과 피해야 할 방식
+
+🎯 **3. 동기부여 전략** (200-300자)
+이 성향의 설계사를 동기부여하는 가장 효과적인 방법
+
+📝 **4. 코칭 시 주의사항** (200-300자)
+이 설계사를 코칭할 때 특별히 주의해야 할 점
+
+🔍 **5. 성과 관리 포인트** (200-300자)
+이 설계사의 성과를 평가하고 관리할 때 중점을 두어야 할 부분
+
+⚠️ **6. 위험 신호 및 조기 개입 포인트** (200-300자)
+이 성향의 설계사가 어려움을 겪을 때 나타나는 신호와 대응 방법
+
+**중요:**
+- 매니저가 실무에서 바로 적용할 수 있는 구체적인 조언
+- 긍정적이면서도 현실적인 관점
+- 설계사의 성장을 돕는 관리자 관점의 통찰력`
+
+    console.log('[매니저 의견] Gemini API 호출 시작...')
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4000,
+            topP: 0.95,
+            topK: 40
+          }
+        })
+      }
+    )
+    
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text()
+      console.error('[매니저 의견] Gemini API 에러:', errorText)
+      throw new Error(`Gemini API 호출 실패: ${geminiResponse.status}`)
+    }
+    
+    const geminiData = await geminiResponse.json()
+    const opinion = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    
+    console.log('[매니저 의견] 생성 완료')
+    
+    return c.json({ success: true, opinion })
+  } catch (error) {
+    console.error('매니저 의견 생성 오류:', error)
+    return c.json({ error: '매니저 의견 생성 중 오류가 발생했습니다.' }, 500)
   }
 })
 

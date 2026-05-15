@@ -60,6 +60,9 @@ export function renderDirectorPage(c: Context) {
                 <button onclick="switchTab('links')" id="tab-links" class="flex-1 py-4 px-6 font-semibold text-gray-500 hover:text-purple-600 transition">
                     <i class="fas fa-link mr-2"></i>외부 링크 관리
                 </button>
+                <button onclick="switchTab('personality')" id="tab-personality" class="flex-1 py-4 px-6 font-semibold text-gray-500 hover:text-purple-600 transition">
+                    <i class="fas fa-brain mr-2"></i>성향 분석 지식
+                </button>
             </div>
         </div>
 
@@ -304,6 +307,53 @@ export function renderDirectorPage(c: Context) {
                 <!-- 링크 목록 -->
                 <div id="linksList" class="space-y-4">
                     <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 성향 분석 지식 관리 탭 -->
+        <div id="content-personality" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="mb-8">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">
+                                <i class="fas fa-brain mr-3 text-purple-600"></i>성향 분석 지식 관리
+                            </h3>
+                            <p class="text-gray-600">설계사와 관리자의 성향 분석 시 AI가 참고할 전문 지식을 관리합니다.</p>
+                            <p class="text-sm text-blue-600 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                센터장님의 경험과 노하우가 AI 코칭에 자동으로 반영됩니다.
+                            </p>
+                        </div>
+                        <button onclick="openAddPersonalityKnowledgeModal()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
+                            <i class="fas fa-plus mr-2"></i>지식 추가
+                        </button>
+                    </div>
+
+                    <!-- 카테고리 탭 -->
+                    <div class="flex gap-2 mb-6 border-b">
+                        <button onclick="filterPersonalityKnowledge('all')" id="pk-filter-all" class="px-4 py-2 font-semibold text-purple-600 border-b-2 border-purple-600">
+                            전체
+                        </button>
+                        <button onclick="filterPersonalityKnowledge('theory')" id="pk-filter-theory" class="px-4 py-2 font-semibold text-gray-500 hover:text-purple-600">
+                            📖 이론 및 원칙
+                        </button>
+                        <button onclick="filterPersonalityKnowledge('case')" id="pk-filter-case" class="px-4 py-2 font-semibold text-gray-500 hover:text-purple-600">
+                            💼 실전 사례
+                        </button>
+                        <button onclick="filterPersonalityKnowledge('script')" id="pk-filter-script" class="px-4 py-2 font-semibold text-gray-500 hover:text-purple-600">
+                            🎯 코칭 스크립트
+                        </button>
+                        <button onclick="filterPersonalityKnowledge('update')" id="pk-filter-update" class="px-4 py-2 font-semibold text-gray-500 hover:text-purple-600">
+                            🔄 업데이트 로그
+                        </button>
+                    </div>
+
+                    <!-- 지식 목록 -->
+                    <div id="personalityKnowledgeList" class="space-y-4">
+                        <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -637,6 +687,152 @@ export function renderDirectorPage(c: Context) {
         </div>
     </div>
 
+    <!-- 성향 분석 지식 추가/수정 모달 -->
+    <div id="personalityKnowledgeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 id="pkModalTitle" class="text-2xl font-bold">
+                        <i class="fas fa-brain mr-2"></i>성향 분석 지식 추가
+                    </h3>
+                    <button onclick="closePersonalityKnowledgeModal()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <input type="hidden" id="pk-id" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-heading text-purple-600 mr-2"></i>제목
+                    </label>
+                    <input type="text" id="pk-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="예: ESTJ 도파민형 코칭 전략">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-folder text-purple-600 mr-2"></i>카테고리
+                    </label>
+                    <select id="pk-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="theory">📖 이론 및 원칙</option>
+                        <option value="case">💼 실전 사례</option>
+                        <option value="script">🎯 코칭 스크립트</option>
+                        <option value="update">🔄 업데이트 로그</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-user-tag text-purple-600 mr-2"></i>성향 필터 (적용 대상 성향)
+                    </label>
+                    <input type="text" id="pk-filter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="예: ESTJ,도파민형,현장파 (전체 적용 시 'ALL' 입력)">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        쉼표로 구분하여 입력하세요. 'ALL' 입력 시 모든 성향에 적용됩니다.
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-users text-purple-600 mr-2"></i>적용 대상
+                    </label>
+                    <select id="pk-target" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="both">👥 공용 (설계사 + 관리자 모두)</option>
+                        <option value="planner">👤 설계사 전용</option>
+                        <option value="manager">👔 관리자 전용</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-align-left text-purple-600 mr-2"></i>내용
+                    </label>
+                    <textarea id="pk-content" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="성향 분석 지식 내용을 입력하세요...
+
+예시:
+## ESTJ 도파민형 특징
+- 목표 지향적이며 즉각적인 보상을 선호
+- 체계적인 접근을 좋아하지만 빠른 결과를 원함
+
+## 코칭 전략
+1. 단기 목표를 설정하여 성취감 제공
+2. 구체적인 액션플랜 제시
+3. 즉각적인 피드백과 인정
+
+## 주의사항
+- 너무 긴 프로세스는 회피할 수 있음
+- 실패 시 빠른 회복 전략 필요"></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-sort-amount-up text-purple-600 mr-2"></i>우선순위 (1-10)
+                    </label>
+                    <input type="number" id="pk-priority" min="1" max="10" value="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        높을수록 AI가 우선적으로 참조합니다. (기본값: 5)
+                    </p>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="savePersonalityKnowledge()" class="flex-1 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                    <button onclick="closePersonalityKnowledgeModal()" class="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 성향 분석 지식 상세보기 모달 -->
+    <div id="personalityKnowledgeViewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold">
+                        <i class="fas fa-file-alt mr-2"></i>지식 상세보기
+                    </h3>
+                    <button onclick="closePersonalityKnowledgeViewModal()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6 pb-6 border-b">
+                    <h4 id="pk-view-title" class="text-2xl font-bold text-gray-800 mb-3"></h4>
+                    <div class="flex gap-4 text-sm text-gray-600 flex-wrap">
+                        <span id="pk-view-category"></span>
+                        <span id="pk-view-filter"></span>
+                        <span id="pk-view-target"></span>
+                        <span id="pk-view-priority"></span>
+                        <span id="pk-view-usage"></span>
+                        <span id="pk-view-date"></span>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">내용</label>
+                    <div id="pk-view-content" class="bg-gray-50 p-4 rounded-lg text-gray-800 whitespace-pre-wrap" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="editPersonalityKnowledgeFromView()" class="flex-1 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-edit mr-2"></i>수정하기
+                    </button>
+                    <button onclick="closePersonalityKnowledgeViewModal()" class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script>
         // 전역 변수
@@ -645,6 +841,8 @@ export function renderDirectorPage(c: Context) {
         let allPlanners = []
         let knowledgeBase = []
         let externalLinks = []
+        let personalityKnowledge = []
+        let currentPKFilter = 'all'
         
         // 초기화
         async function init() {
@@ -668,6 +866,7 @@ export function renderDirectorPage(c: Context) {
                 await loadSessions()
                 await loadKnowledge()
                 await loadLinks()
+                await loadPersonalityKnowledge()
             } catch (error) {
                 console.error('초기화 오류:', error)
                 alert('페이지 초기화 중 오류가 발생했습니다: ' + error.message)
@@ -1647,6 +1846,247 @@ export function renderDirectorPage(c: Context) {
             }
         }
         
+        // ============== 성향 분석 지식 관리 ==============
+        
+        // 성향 분석 지식 로드
+        async function loadPersonalityKnowledge() {
+            try {
+                const res = await axios.get('/api/director/personality-knowledge')
+                personalityKnowledge = res.data.knowledge || []
+                displayPersonalityKnowledge()
+            } catch (error) {
+                console.error('성향 분석 지식 로드 실패:', error)
+                document.getElementById('personalityKnowledgeList').innerHTML = '<p class="text-red-500 text-center py-8">지식을 불러오는데 실패했습니다.</p>'
+            }
+        }
+        
+        // 성향 분석 지식 표시
+        function displayPersonalityKnowledge() {
+            const container = document.getElementById('personalityKnowledgeList')
+            
+            let filtered = [...personalityKnowledge]
+            if (currentPKFilter !== 'all') {
+                filtered = filtered.filter(k => k.category === currentPKFilter)
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">등록된 지식이 없습니다.</p>'
+                return
+            }
+            
+            // 우선순위별로 정렬
+            filtered.sort((a, b) => b.priority - a.priority)
+            
+            const categoryIcons = {
+                'theory': '📖',
+                'case': '💼',
+                'script': '🎯',
+                'update': '🔄'
+            }
+            
+            const categoryNames = {
+                'theory': '이론 및 원칙',
+                'case': '실전 사례',
+                'script': '코칭 스크립트',
+                'update': '업데이트 로그'
+            }
+            
+            container.innerHTML = filtered.map(k => \`
+                <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition cursor-pointer" onclick="viewPersonalityKnowledge(\${k.id})">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="text-xl font-bold text-gray-800">\${k.title}</h4>
+                                \${k.priority >= 8 ? '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">최우선</span>' : ''}
+                            </div>
+                            <div class="flex gap-2 mb-3 flex-wrap">
+                                <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                                    \${categoryIcons[k.category]} \${categoryNames[k.category]}
+                                </span>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                    \${k.targetAudience === 'both' ? '👥 공용' : k.targetAudience === 'planner' ? '👤 설계사' : '👔 관리자'}
+                                </span>
+                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                    성향: \${k.personalityFilter === 'ALL' ? '전체' : k.personalityFilter}
+                                </span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                    우선순위: \${k.priority}
+                                </span>
+                                \${k.usageCount > 0 ? \`<span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">활용: \${k.usageCount}회</span>\` : ''}
+                            </div>
+                            <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-calendar mr-1"></i>\${new Date(k.createdAt).toLocaleDateString('ko-KR')}
+                            </p>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="event.stopPropagation(); editPersonalityKnowledge(\${k.id})" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition text-sm" title="수정">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); deletePersonalityKnowledge(\${k.id})" class="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition text-sm" title="삭제">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            \`).join('')
+        }
+        
+        // 카테고리 필터
+        function filterPersonalityKnowledge(category) {
+            currentPKFilter = category
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('[id^="pk-filter-"]').forEach(btn => {
+                btn.classList.remove('text-purple-600', 'border-b-2', 'border-purple-600')
+                btn.classList.add('text-gray-500')
+            })
+            document.getElementById(\`pk-filter-\${category}\`).classList.remove('text-gray-500')
+            document.getElementById(\`pk-filter-\${category}\`).classList.add('text-purple-600', 'border-b-2', 'border-purple-600')
+            
+            displayPersonalityKnowledge()
+        }
+        
+        // 지식 추가 모달 열기
+        function openAddPersonalityKnowledgeModal() {
+            document.getElementById('pkModalTitle').innerHTML = '<i class="fas fa-brain mr-2"></i>성향 분석 지식 추가'
+            document.getElementById('pk-id').value = ''
+            document.getElementById('pk-title').value = ''
+            document.getElementById('pk-category').value = 'theory'
+            document.getElementById('pk-filter').value = 'ALL'
+            document.getElementById('pk-target').value = 'both'
+            document.getElementById('pk-content').value = ''
+            document.getElementById('pk-priority').value = '5'
+            document.getElementById('personalityKnowledgeModal').classList.remove('hidden')
+            document.getElementById('personalityKnowledgeModal').classList.add('flex')
+        }
+        
+        // 지식 수정 모달 열기
+        function editPersonalityKnowledge(id) {
+            const knowledge = personalityKnowledge.find(k => k.id === id)
+            if (!knowledge) return
+            
+            document.getElementById('pkModalTitle').innerHTML = '<i class="fas fa-edit mr-2"></i>성향 분석 지식 수정'
+            document.getElementById('pk-id').value = knowledge.id
+            document.getElementById('pk-title').value = knowledge.title
+            document.getElementById('pk-category').value = knowledge.category
+            document.getElementById('pk-filter').value = knowledge.personalityFilter
+            document.getElementById('pk-target').value = knowledge.targetAudience
+            document.getElementById('pk-content').value = knowledge.content
+            document.getElementById('pk-priority').value = knowledge.priority
+            document.getElementById('personalityKnowledgeModal').classList.remove('hidden')
+            document.getElementById('personalityKnowledgeModal').classList.add('flex')
+        }
+        
+        // 지식 모달 닫기
+        function closePersonalityKnowledgeModal() {
+            document.getElementById('personalityKnowledgeModal').classList.add('hidden')
+            document.getElementById('personalityKnowledgeModal').classList.remove('flex')
+        }
+        
+        // 지식 저장
+        async function savePersonalityKnowledge() {
+            const id = document.getElementById('pk-id').value
+            const title = document.getElementById('pk-title').value.trim()
+            const category = document.getElementById('pk-category').value
+            const personalityFilter = document.getElementById('pk-filter').value.trim() || 'ALL'
+            const targetAudience = document.getElementById('pk-target').value
+            const content = document.getElementById('pk-content').value.trim()
+            const priority = parseInt(document.getElementById('pk-priority').value)
+            
+            if (!title || !content) {
+                alert('제목과 내용은 필수입니다.')
+                return
+            }
+            
+            try {
+                const payload = {
+                    title,
+                    category,
+                    personalityFilter,
+                    targetAudience,
+                    content,
+                    priority
+                }
+                
+                if (id) {
+                    // 수정
+                    await axios.put(\`/api/director/personality-knowledge/\${id}\`, payload)
+                    alert('지식이 수정되었습니다.')
+                } else {
+                    // 추가
+                    await axios.post('/api/director/personality-knowledge', payload)
+                    alert('지식이 추가되었습니다.')
+                }
+                
+                closePersonalityKnowledgeModal()
+                await loadPersonalityKnowledge()
+            } catch (error) {
+                console.error('지식 저장 실패:', error)
+                alert('지식 저장에 실패했습니다.')
+            }
+        }
+        
+        // 지식 상세보기
+        function viewPersonalityKnowledge(id) {
+            const knowledge = personalityKnowledge.find(k => k.id === id)
+            if (!knowledge) return
+            
+            const categoryIcons = {
+                'theory': '📖',
+                'case': '💼',
+                'script': '🎯',
+                'update': '🔄'
+            }
+            
+            const categoryNames = {
+                'theory': '이론 및 원칙',
+                'case': '실전 사례',
+                'script': '코칭 스크립트',
+                'update': '업데이트 로그'
+            }
+            
+            document.getElementById('pk-view-title').textContent = knowledge.title
+            document.getElementById('pk-view-title').dataset.id = knowledge.id
+            document.getElementById('pk-view-category').innerHTML = \`<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">\${categoryIcons[knowledge.category]} \${categoryNames[knowledge.category]}</span>\`
+            document.getElementById('pk-view-filter').innerHTML = \`<span class="bg-green-100 text-green-800 px-2 py-1 rounded">성향: \${knowledge.personalityFilter === 'ALL' ? '전체' : knowledge.personalityFilter}</span>\`
+            document.getElementById('pk-view-target').innerHTML = \`<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">\${knowledge.targetAudience === 'both' ? '👥 공용' : knowledge.targetAudience === 'planner' ? '👤 설계사' : '👔 관리자'}</span>\`
+            document.getElementById('pk-view-priority').innerHTML = \`<span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">우선순위: \${knowledge.priority}</span>\`
+            document.getElementById('pk-view-usage').innerHTML = knowledge.usageCount > 0 ? \`<span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">활용: \${knowledge.usageCount}회</span>\` : ''
+            document.getElementById('pk-view-date').textContent = new Date(knowledge.createdAt).toLocaleDateString('ko-KR')
+            document.getElementById('pk-view-content').textContent = knowledge.content
+            
+            document.getElementById('personalityKnowledgeViewModal').classList.remove('hidden')
+            document.getElementById('personalityKnowledgeViewModal').classList.add('flex')
+        }
+        
+        // 상세보기 모달 닫기
+        function closePersonalityKnowledgeViewModal() {
+            document.getElementById('personalityKnowledgeViewModal').classList.add('hidden')
+            document.getElementById('personalityKnowledgeViewModal').classList.remove('flex')
+        }
+        
+        // 상세보기에서 수정하기
+        function editPersonalityKnowledgeFromView() {
+            const id = parseInt(document.getElementById('pk-view-title').dataset.id)
+            closePersonalityKnowledgeViewModal()
+            editPersonalityKnowledge(id)
+        }
+        
+        // 지식 삭제
+        async function deletePersonalityKnowledge(id) {
+            if (!confirm('정말로 이 지식을 삭제하시겠습니까?')) return
+            
+            try {
+                await axios.delete(\`/api/director/personality-knowledge/\${id}\`)
+                alert('지식이 삭제되었습니다.')
+                await loadPersonalityKnowledge()
+            } catch (error) {
+                console.error('지식 삭제 실패:', error)
+                alert('지식 삭제에 실패했습니다.')
+            }
+        }
+        
         function switchTab(tab) {
             // 모든 탭 버튼 초기화
             document.querySelectorAll('[id^="tab-"]').forEach(btn => {
@@ -1725,6 +2165,18 @@ export function renderDirectorPage(c: Context) {
         window.editLink = editLink
         window.toggleLinkStatus = toggleLinkStatus
         window.deleteLink = deleteLink
+        window.toggleAuthFields = toggleAuthFields
+        
+        // Personality Knowledge Management
+        window.filterPersonalityKnowledge = filterPersonalityKnowledge
+        window.openAddPersonalityKnowledgeModal = openAddPersonalityKnowledgeModal
+        window.closePersonalityKnowledgeModal = closePersonalityKnowledgeModal
+        window.savePersonalityKnowledge = savePersonalityKnowledge
+        window.editPersonalityKnowledge = editPersonalityKnowledge
+        window.viewPersonalityKnowledge = viewPersonalityKnowledge
+        window.closePersonalityKnowledgeViewModal = closePersonalityKnowledgeViewModal
+        window.editPersonalityKnowledgeFromView = editPersonalityKnowledgeFromView
+        window.deletePersonalityKnowledge = deletePersonalityKnowledge
         
         // 페이지 로드 시 초기화
         window.onload = () => {
