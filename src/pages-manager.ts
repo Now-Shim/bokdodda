@@ -397,18 +397,23 @@ export function renderManagerPage(c: Context) {
                             <h4 class="text-xl font-bold text-gray-800">
                                 <i class="fas fa-user-tie mr-2 text-orange-600"></i>매니저의 의견
                             </h4>
-                            <button onclick="generateManagerOpinion()" id="generate-opinion-btn" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition font-semibold shadow-lg">
-                                <i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="openManagerOpinionTest()" id="start-manager-test-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow-lg">
+                                    <i class="fas fa-clipboard-check mr-2"></i>매니저 의견 입력
+                                </button>
+                                <button onclick="generateManagerOpinionComparison()" id="generate-comparison-btn" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition font-semibold shadow-lg hidden">
+                                    <i class="fas fa-wand-magic-sparkles mr-2"></i>AI 비교 분석
+                                </button>
+                            </div>
                         </div>
                         <div class="bg-white rounded-lg p-4 mb-3 text-sm text-gray-600">
                             <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-                            매니저 시점에서 본 설계사의 성향 분석입니다. AI가 설계사의 성향 분석 결과를 바탕으로 매니저 관점의 관리 포인트를 제시합니다.
+                            매니저가 직접 설계사의 성향을 평가하고, AI가 설계사의 자가 평가와 비교 분석합니다. 매니저와 설계사의 인식 차이를 발견하고 관리 포인트를 제시합니다.
                         </div>
                         <div id="detail-manager-opinion" class="bg-white rounded-lg p-6 min-h-[300px]">
                             <p class="text-gray-500 italic text-center py-12">
                                 <i class="fas fa-lightbulb text-5xl text-orange-400 mb-4 block"></i>
-                                <span class="text-lg">'AI 분석' 버튼을 클릭하면 매니저 시점의 성향 분석을 생성합니다.</span>
+                                <span class="text-lg">'매니저 의견 입력' 버튼을 클릭하여 설계사 성향을 평가하세요.</span>
                             </p>
                         </div>
                     </div>
@@ -436,6 +441,156 @@ export function renderManagerPage(c: Context) {
                     <div id="detail-coaching-list" class="space-y-4">
                         <p class="text-gray-500 text-center py-8">로딩 중...</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 매니저 의견 입력 모달 -->
+    <div id="managerOpinionTestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gradient-to-r from-orange-600 to-red-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold">
+                        <i class="fas fa-user-tie mr-2"></i>매니저 의견 - 설계사 성향 평가
+                    </h3>
+                    <button onclick="closeManagerOpinionTest()" class="text-white hover:text-gray-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-gray-700">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                        <strong>매니저 시점에서</strong> 이 설계사의 성향을 평가해주세요. 설계사의 자가 평가와 비교하여 인식 차이를 분석합니다.
+                    </p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- 질문 1: 에너지 방향 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-purple-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">1</span>
+                            에너지 방향
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사는 어디서 에너지를 얻나요?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-400 transition">
+                                <input type="radio" name="manager_energyDirection" value="외향형 (E)" class="mr-3">
+                                <span class="font-semibold">외향형 (E)</span> - 사람들과의 만남에서 활력을 얻고, 적극적으로 소통함
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-400 transition">
+                                <input type="radio" name="manager_energyDirection" value="내향형 (I)" class="mr-3">
+                                <span class="font-semibold">내향형 (I)</span> - 혼자 생각하는 시간에서 에너지를 얻고, 신중하게 접근함
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 질문 2: 정보 인식 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-blue-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">2</span>
+                            정보 인식 방식
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사는 고객 정보를 어떻게 파악하나요?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition">
+                                <input type="radio" name="manager_informationProcessing" value="감각형 (S)" class="mr-3">
+                                <span class="font-semibold">감각형 (S)</span> - 구체적 사실과 현재 상황에 집중함
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition">
+                                <input type="radio" name="manager_informationProcessing" value="직관형 (N)" class="mr-3">
+                                <span class="font-semibold">직관형 (N)</span> - 패턴과 가능성, 미래 전망에 주목함
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 질문 3: 의사 결정 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-green-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">3</span>
+                            의사 결정 방식
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사는 어떻게 결정을 내리나요?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-400 transition">
+                                <input type="radio" name="manager_decisionMaking" value="사고형 (T)" class="mr-3">
+                                <span class="font-semibold">사고형 (T)</span> - 논리와 객관적 분석을 우선시함
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-400 transition">
+                                <input type="radio" name="manager_decisionMaking" value="감정형 (F)" class="mr-3">
+                                <span class="font-semibold">감정형 (F)</span> - 사람과 감정, 관계를 중요하게 고려함
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 질문 4: 성취 동기 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-orange-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">4</span>
+                            성취 동기
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사의 주된 동기는 무엇인가요?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-400 transition">
+                                <input type="radio" name="manager_achievementMotivation" value="숫자 지향" class="mr-3">
+                                <span class="font-semibold">숫자 지향</span> - 실적, 수치, 목표 달성에 집중
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-400 transition">
+                                <input type="radio" name="manager_achievementMotivation" value="관계 지향" class="mr-3">
+                                <span class="font-semibold">관계 지향</span> - 고객과의 신뢰, 장기 관계 구축 중시
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 질문 5: 스트레스 회복 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-pink-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">5</span>
+                            스트레스 회복 방식
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사는 힘든 상황을 어떻게 극복하나요?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-pink-400 transition">
+                                <input type="radio" name="manager_stressRecovery" value="적극 해결형" class="mr-3">
+                                <span class="font-semibold">적극 해결형</span> - 즉시 행동하고 적극적으로 문제 해결
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-pink-400 transition">
+                                <input type="radio" name="manager_stressRecovery" value="성찰 회복형" class="mr-3">
+                                <span class="font-semibold">성찰 회복형</span> - 시간을 두고 생각하며 회복
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 질문 6: 전문성 선호 -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <span class="bg-indigo-600 text-white w-8 h-8 rounded-full inline-flex items-center justify-center mr-2">6</span>
+                            전문성 선호
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">이 설계사가 선호하는 업무 스타일은?</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-400 transition">
+                                <input type="radio" name="manager_professionalPreference" value="전문가형" class="mr-3">
+                                <span class="font-semibold">전문가형</span> - 한 분야 깊이 있는 전문성 추구
+                            </label>
+                            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-400 transition">
+                                <input type="radio" name="manager_professionalPreference" value="제너럴리스트형" class="mr-3">
+                                <span class="font-semibold">제너럴리스트형</span> - 다양한 상품과 고객층 대응
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-6">
+                    <button onclick="submitManagerOpinionTest()" class="flex-1 px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold shadow-lg">
+                        <i class="fas fa-check mr-2"></i>평가 완료
+                    </button>
+                    <button onclick="closeManagerOpinionTest()" class="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-times mr-2"></i>취소
+                    </button>
                 </div>
             </div>
         </div>

@@ -509,61 +509,241 @@ function applyDetailFilters() {
     displayPlannerCoachingSessions(filtered)
 }
 
-// 매니저 의견 생성 (AI)
-async function generateManagerOpinion() {
+// 매니저 의견 테스트 열기
+let managerOpinionAnswers = null
+
+function openManagerOpinionTest() {
     if (!currentPlannerDetail) return
     
-    const btn = document.getElementById('generate-opinion-btn')
+    const modal = document.getElementById('managerOpinionTestModal')
+    modal.classList.remove('hidden')
+    modal.classList.add('flex')
+    
+    // 기존 답변 초기화
+    document.querySelectorAll('input[type="radio"][name^="manager_"]').forEach(input => {
+        input.checked = false
+    })
+}
+
+function closeManagerOpinionTest() {
+    const modal = document.getElementById('managerOpinionTestModal')
+    modal.classList.add('hidden')
+    modal.classList.remove('flex')
+}
+
+// 매니저 의견 테스트 제출
+function submitManagerOpinionTest() {
+    // 모든 질문에 답변했는지 확인
+    const energyDirection = document.querySelector('input[name="manager_energyDirection"]:checked')
+    const informationProcessing = document.querySelector('input[name="manager_informationProcessing"]:checked')
+    const decisionMaking = document.querySelector('input[name="manager_decisionMaking"]:checked')
+    const achievementMotivation = document.querySelector('input[name="manager_achievementMotivation"]:checked')
+    const stressRecovery = document.querySelector('input[name="manager_stressRecovery"]:checked')
+    const professionalPreference = document.querySelector('input[name="manager_professionalPreference"]:checked')
+    
+    if (!energyDirection || !informationProcessing || !decisionMaking || 
+        !achievementMotivation || !stressRecovery || !professionalPreference) {
+        alert('모든 질문에 답변해주세요.')
+        return
+    }
+    
+    // 답변 저장
+    managerOpinionAnswers = {
+        energyDirection: energyDirection.value,
+        informationProcessing: informationProcessing.value,
+        decisionMaking: decisionMaking.value,
+        achievementMotivation: achievementMotivation.value,
+        stressRecovery: stressRecovery.value,
+        professionalPreference: professionalPreference.value
+    }
+    
+    // 모달 닫기
+    closeManagerOpinionTest()
+    
+    // 매니저 의견 표시
+    displayManagerOpinionAnswers()
+    
+    // AI 비교 분석 버튼 활성화
+    document.getElementById('start-manager-test-btn').innerHTML = '<i class="fas fa-edit mr-2"></i>매니저 의견 수정'
+    document.getElementById('generate-comparison-btn').classList.remove('hidden')
+}
+
+// 매니저 의견 답변 표시
+function displayManagerOpinionAnswers() {
+    if (!managerOpinionAnswers) return
+    
+    const container = document.getElementById('detail-manager-opinion')
+    
+    container.innerHTML = `
+        <div class="space-y-4">
+            <h5 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-clipboard-check mr-2 text-orange-600"></i>매니저의 평가
+            </h5>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">에너지 방향</p>
+                    <p class="text-lg font-bold text-purple-600">${managerOpinionAnswers.energyDirection}</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">정보 인식</p>
+                    <p class="text-lg font-bold text-blue-600">${managerOpinionAnswers.informationProcessing}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">의사 결정</p>
+                    <p class="text-lg font-bold text-green-600">${managerOpinionAnswers.decisionMaking}</p>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">성취 동기</p>
+                    <p class="text-lg font-bold text-orange-600">${managerOpinionAnswers.achievementMotivation}</p>
+                </div>
+                <div class="bg-pink-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">스트레스 회복</p>
+                    <p class="text-lg font-bold text-pink-600">${managerOpinionAnswers.stressRecovery}</p>
+                </div>
+                <div class="bg-indigo-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">전문성 선호</p>
+                    <p class="text-lg font-bold text-indigo-600">${managerOpinionAnswers.professionalPreference}</p>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 mt-4">
+                <p class="text-sm text-gray-700">
+                    <i class="fas fa-lightbulb mr-2 text-yellow-600"></i>
+                    <strong>'AI 비교 분석'</strong> 버튼을 클릭하여 설계사의 자가 평가와 비교하고 인식 차이를 분석하세요.
+                </p>
+            </div>
+        </div>
+    `
+}
+
+// 매니저 의견 비교 분석 (AI)
+async function generateManagerOpinionComparison() {
+    if (!currentPlannerDetail || !managerOpinionAnswers) return
+    
+    const btn = document.getElementById('generate-comparison-btn')
     const container = document.getElementById('detail-manager-opinion')
     
     btn.disabled = true
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>분석 중...'
     
-    container.innerHTML = '<p class="text-gray-500 text-center py-12"><i class="fas fa-spinner fa-spin text-5xl text-blue-400 mb-4"></i><br>AI가 매니저 시점의 성향 분석을 생성하고 있습니다...</p>'
+    container.innerHTML = '<p class="text-gray-500 text-center py-12"><i class="fas fa-spinner fa-spin text-5xl text-blue-400 mb-4"></i><br>AI가 설계사와 매니저의 인식 차이를 비교 분석하고 있습니다...</p>'
     
     try {
         const { user, profile } = currentPlannerDetail
         
-        const res = await axios.post('/api/manager/generate-opinion', {
+        const res = await axios.post('/api/manager/generate-opinion-comparison', {
             plannerId: user.id,
             plannerName: user.name,
-            personalityType: profile.personalityType,
-            energyDirection: profile.energyDirection,
-            informationProcessing: profile.informationProcessing,
-            decisionMaking: profile.decisionMaking,
-            achievementMotivation: profile.achievementMotivation,
-            stressRecovery: profile.stressRecovery,
-            professionalPreference: profile.professionalPreference,
-            strengths: profile.strengths,
-            recommendedStyle: profile.recommendedStyle,
-            cautions: profile.cautions,
-            growthDirection: profile.growthDirection
+            // 설계사 자가 평가
+            plannerEvaluation: {
+                energyDirection: profile.energyDirection,
+                informationProcessing: profile.informationProcessing,
+                decisionMaking: profile.decisionMaking,
+                achievementMotivation: profile.achievementMotivation,
+                stressRecovery: profile.stressRecovery,
+                professionalPreference: profile.professionalPreference
+            },
+            // 매니저 평가
+            managerEvaluation: managerOpinionAnswers
         })
         
-        const opinion = res.data.opinion
+        const analysis = res.data.analysis
         
-        // 포맷팅된 HTML로 표시
-        const lines = opinion.split('\n')
-        const formattedHTML = lines.map(line => {
-            if (line.trim() === '') return '<br>'
-            if (line.trim() === '---') return '<hr class="my-4 border-gray-300">'
-            if (/^[💼📊🎯📝🔍⚠️💪🌟]/.test(line.trim())) {
-                return '<p class="font-bold text-lg mt-4 mb-2 text-orange-700">' + line + '</p>'
-            }
-            if (/^\d+\./.test(line.trim())) {
-                return '<p class="ml-4 mb-2 text-gray-800">' + line + '</p>'
-            }
-            return '<p class="mb-2 text-gray-800">' + line + '</p>'
-        }).join('')
-        
-        container.innerHTML = '<div class="space-y-1">' + formattedHTML + '</div>'
+        // 비교 결과 표시
+        displayComparisonResult(analysis)
     } catch (error) {
-        console.error('매니저 의견 생성 오류:', error)
-        container.innerHTML = '<p class="text-red-500 text-center py-8">매니저 의견 생성에 실패했습니다.</p>'
+        console.error('매니저 의견 비교 분석 오류:', error)
+        container.innerHTML = '<p class="text-red-500 text-center py-8">비교 분석에 실패했습니다.</p>'
     } finally {
         btn.disabled = false
-        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>AI 분석'
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>AI 비교 분석'
     }
+}
+
+// 비교 결과 표시
+function displayComparisonResult(analysis) {
+    if (!currentPlannerDetail || !managerOpinionAnswers) return
+    
+    const { profile } = currentPlannerDetail
+    const container = document.getElementById('detail-manager-opinion')
+    
+    // 각 항목별 일치 여부 확인
+    const dimensions = [
+        { key: 'energyDirection', label: '에너지 방향', color: 'purple' },
+        { key: 'informationProcessing', label: '정보 인식', color: 'blue' },
+        { key: 'decisionMaking', label: '의사 결정', color: 'green' },
+        { key: 'achievementMotivation', label: '성취 동기', color: 'orange' },
+        { key: 'stressRecovery', label: '스트레스 회복', color: 'pink' },
+        { key: 'professionalPreference', label: '전문성 선호', color: 'indigo' }
+    ]
+    
+    let comparisonTableHTML = '<div class="overflow-x-auto"><table class="w-full border-collapse">'
+    comparisonTableHTML += '<thead><tr class="bg-gray-100">'
+    comparisonTableHTML += '<th class="border border-gray-300 px-4 py-3 text-left font-bold">차원</th>'
+    comparisonTableHTML += '<th class="border border-gray-300 px-4 py-3 text-center font-bold">설계사 평가</th>'
+    comparisonTableHTML += '<th class="border border-gray-300 px-4 py-3 text-center font-bold">매니저 평가</th>'
+    comparisonTableHTML += '<th class="border border-gray-300 px-4 py-3 text-center font-bold">일치도</th>'
+    comparisonTableHTML += '</tr></thead><tbody>'
+    
+    dimensions.forEach(dim => {
+        const plannerValue = profile[dim.key] || '-'
+        const managerValue = managerOpinionAnswers[dim.key] || '-'
+        const isMatch = plannerValue === managerValue
+        
+        comparisonTableHTML += '<tr class="hover:bg-gray-50">'
+        comparisonTableHTML += '<td class="border border-gray-300 px-4 py-3 font-semibold">' + dim.label + '</td>'
+        comparisonTableHTML += '<td class="border border-gray-300 px-4 py-3 text-center bg-blue-50">' + plannerValue + '</td>'
+        comparisonTableHTML += '<td class="border border-gray-300 px-4 py-3 text-center bg-orange-50">' + managerValue + '</td>'
+        comparisonTableHTML += '<td class="border border-gray-300 px-4 py-3 text-center">'
+        
+        if (isMatch) {
+            comparisonTableHTML += '<span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">'
+            comparisonTableHTML += '<i class="fas fa-check-circle mr-2"></i>일치'
+            comparisonTableHTML += '</span>'
+        } else {
+            comparisonTableHTML += '<span class="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold">'
+            comparisonTableHTML += '<i class="fas fa-times-circle mr-2"></i>불일치'
+            comparisonTableHTML += '</span>'
+        }
+        
+        comparisonTableHTML += '</td></tr>'
+    })
+    
+    comparisonTableHTML += '</tbody></table></div>'
+    
+    // AI 분석 멘트 포맷팅
+    const lines = analysis.split('\n')
+    const formattedHTML = lines.map(line => {
+        if (line.trim() === '') return '<br>'
+        if (line.trim() === '---') return '<hr class="my-4 border-gray-300">'
+        if (/^[💼📊🎯📝🔍⚠️💪🌟🔎⚡]/.test(line.trim())) {
+            return '<p class="font-bold text-lg mt-4 mb-2 text-orange-700">' + line + '</p>'
+        }
+        if (/^\d+\./.test(line.trim())) {
+            return '<p class="ml-4 mb-2 text-gray-800">' + line + '</p>'
+        }
+        return '<p class="mb-2 text-gray-700 leading-relaxed">' + line + '</p>'
+    }).join('')
+    
+    container.innerHTML = `
+        <div class="space-y-6">
+            <h5 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-balance-scale mr-2 text-orange-600"></i>설계사 vs 매니저 평가 비교
+            </h5>
+            
+            ${comparisonTableHTML}
+            
+            <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl p-6 mt-6">
+                <h5 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-lightbulb mr-2 text-orange-600"></i>AI 차이 분석 및 관리 포인트
+                </h5>
+                <div class="space-y-2">
+                    ${formattedHTML}
+                </div>
+            </div>
+        </div>
+    `
 }
 
 // 상세 탭 전환
@@ -893,7 +1073,10 @@ window.viewPlannerDetail = viewPlannerDetail
 window.closePlannerDetailModal = closePlannerDetailModal
 window.switchDetailTab = switchDetailTab
 window.applyDetailFilters = applyDetailFilters
-window.generateManagerOpinion = generateManagerOpinion
+window.openManagerOpinionTest = openManagerOpinionTest
+window.closeManagerOpinionTest = closeManagerOpinionTest
+window.submitManagerOpinionTest = submitManagerOpinionTest
+window.generateManagerOpinionComparison = generateManagerOpinionComparison
 window.openManagerPersonalityTest = openManagerPersonalityTest
 window.closeManagerPersonalityTest = closeManagerPersonalityTest
 window.submitManagerPersonalityTest = submitManagerPersonalityTest

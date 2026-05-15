@@ -2183,6 +2183,157 @@ ${managerKnowledge}
   }
 })
 
+// 매니저: 설계사 vs 매니저 성향 평가 비교 분석 (AI)
+app.post('/api/manager/generate-opinion-comparison', async (c) => {
+  const { plannerId, plannerName, plannerEvaluation, managerEvaluation } = await c.req.json()
+  const { env } = c
+  
+  try {
+    console.log('[매니저 의견 비교] 시작 - 설계사:', plannerName)
+    
+    const GEMINI_API_KEY = env.GEMINI_API_KEY
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+    
+    // 차이점 분석
+    const differences = []
+    const dimensions = [
+      { key: 'energyDirection', label: '에너지 방향' },
+      { key: 'informationProcessing', label: '정보 인식' },
+      { key: 'decisionMaking', label: '의사 결정' },
+      { key: 'achievementMotivation', label: '성취 동기' },
+      { key: 'stressRecovery', label: '스트레스 회복' },
+      { key: 'professionalPreference', label: '전문성 선호' }
+    ]
+    
+    dimensions.forEach(dim => {
+      const plannerValue = plannerEvaluation[dim.key]
+      const managerValue = managerEvaluation[dim.key]
+      
+      if (plannerValue !== managerValue) {
+        differences.push({
+          dimension: dim.label,
+          plannerView: plannerValue,
+          managerView: managerValue
+        })
+      }
+    })
+    
+    const prompt = `보험 설계사 "${plannerName}"에 대한 자가 평가와 매니저 평가를 비교 분석해주세요.
+
+**설계사 자가 평가:**
+- 에너지 방향: ${plannerEvaluation.energyDirection}
+- 정보 인식: ${plannerEvaluation.informationProcessing}
+- 의사 결정: ${plannerEvaluation.decisionMaking}
+- 성취 동기: ${plannerEvaluation.achievementMotivation}
+- 스트레스 회복: ${plannerEvaluation.stressRecovery}
+- 전문성 선호: ${plannerEvaluation.professionalPreference}
+
+**매니저 평가:**
+- 에너지 방향: ${managerEvaluation.energyDirection}
+- 정보 인식: ${managerEvaluation.informationProcessing}
+- 의사 결정: ${managerEvaluation.decisionMaking}
+- 성취 동기: ${managerEvaluation.achievementMotivation}
+- 스트레스 회복: ${managerEvaluation.stressRecovery}
+- 전문성 선호: ${managerEvaluation.professionalPreference}
+
+**인식 차이 분석 요청:**
+
+${differences.length === 0 ? `
+🌟 **완벽한 일치!**
+
+설계사와 매니저의 평가가 6개 항목 모두 일치합니다! 이것은 매우 긍정적인 신호입니다.
+
+다음 내용을 200-300자로 작성해주세요:
+
+1. **자기 인식의 정확성**: 설계사가 자신의 성향을 정확하게 파악하고 있다는 의미
+2. **소통의 효과성**: 매니저와 설계사 간 효과적인 커뮤니케이션이 이루어지고 있음
+3. **관리 포인트**: 이 일치를 바탕으로 더욱 발전시킬 수 있는 부분
+4. **지속 전략**: 이 좋은 관계를 유지하고 강화하는 방법
+
+**톤:** 긍정적이고 격려하는 분위기, 구체적인 실행 방안 포함
+` : `
+🔎 **인식 차이 발견!**
+
+총 ${differences.length}개 항목에서 차이가 발견되었습니다:
+
+${differences.map((diff, i) => `
+${i + 1}. **${diff.dimension}**
+   - 설계사 평가: ${diff.plannerView}
+   - 매니저 평가: ${diff.managerView}`).join('\n')}
+
+다음 내용을 작성해주세요:
+
+⚡ **1. 차이의 의미 분석** (200-250자)
+각 차이가 실무에서 어떤 영향을 미칠 수 있는지, 왜 이런 차이가 발생했을지 분석
+
+🔍 **2. 일치하는 부분의 강점** (150-200자)
+${6 - differences.length}개 항목이 일치한다는 것의 긍정적 의미
+
+📝 **3. 관리 포인트** (250-300자)
+- 차이를 좁히기 위한 구체적인 대화 주제
+- 설계사의 자기 인식을 높이는 방법
+- 매니저가 설계사를 더 잘 이해하기 위한 접근법
+
+💡 **4. 실행 가능한 조언** (200-250자)
+- 다음 1:1 미팅에서 다룰 구체적인 주제
+- 관찰해야 할 행동 패턴
+- 피드백 전달 방법
+
+**중요:**
+- 차이를 '문제'가 아닌 '성장의 기회'로 프레이밍
+- 설계사와 매니저 모두에게 도움이 되는 실용적 조언
+- 긍정적이면서도 구체적인 실행 방안
+`}
+
+**전체적으로:**
+- 매니저가 다음 액션을 취할 수 있도록 구체적으로 작성
+- 보험 설계사 업무 특성을 고려
+- 건설적이고 발전 지향적인 톤 유지`
+
+    console.log('[매니저 의견 비교] Gemini API 호출 시작...')
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 3000,
+            topP: 0.95,
+            topK: 40
+          }
+        })
+      }
+    )
+    
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text()
+      console.error('[매니저 의견 비교] Gemini API 에러:', errorText)
+      throw new Error(`Gemini API 호출 실패: ${geminiResponse.status}`)
+    }
+    
+    const geminiData = await geminiResponse.json()
+    const analysis = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    
+    console.log('[매니저 의견 비교] 생성 완료')
+    
+    return c.json({ success: true, analysis, differenceCount: differences.length })
+  } catch (error) {
+    console.error('매니저 의견 비교 분석 오류:', error)
+    return c.json({ error: '매니저 의견 비교 분석 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 웹 크롤링 (링크 내용 수집)
 app.post('/api/crawl', async (c) => {
   const { url } = await c.req.json()
