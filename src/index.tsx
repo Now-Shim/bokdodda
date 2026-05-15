@@ -716,26 +716,34 @@ app.get('/api/manager/sessions', async (c) => {
 })
 
 // 관리자 - 설계사 목록
-app.get('/api/manager/planners', (c) => {
+app.get('/api/manager/planners', async (c) => {
+  const { env } = c
   const currentYear = new Date().getFullYear()
+  
+  // 데이터베이스에서 모든 설계사 프로필 조회
+  const profilesResult = await env.DB.prepare(`
+    SELECT * FROM planner_profiles
+  `).all()
+  
+  const profiles = profilesResult.results || []
   
   const planners = users
     .filter(u => u.role === 'planner')
     .map(u => {
-      const profile = plannerProfiles.find(p => p.userId === u.id)
+      const profile = profiles.find((p: any) => p.user_id === u.id)
       
       // 경력 연수 자동 계산
       let experienceYears = 0
       let experienceText = '미설정'
-      if (profile?.careerStartYear) {
-        experienceYears = currentYear - parseInt(profile.careerStartYear) + 1
+      if (profile?.career_start_year) {
+        experienceYears = currentYear - parseInt(profile.career_start_year) + 1
         experienceText = experienceYears + '년'
       }
       
       // 전문 분야 자동 판단 (생보/손보 비중 기반)
       let specialization = '미설정'
-      if (profile?.productRatio) {
-        const ratioMatch = profile.productRatio.match(/생보 (\d+)% \/ 손보 (\d+)%/)
+      if (profile?.product_ratio) {
+        const ratioMatch = profile.product_ratio.match(/생보 (\d+)% \/ 손보 (\d+)%/)
         if (ratioMatch) {
           const lifeRatio = parseInt(ratioMatch[1])
           const nonLifeRatio = parseInt(ratioMatch[2])
@@ -756,8 +764,8 @@ app.get('/api/manager/planners', (c) => {
       
       // 영업 스타일 판단 (성향 기반)
       let salesStyle = '분석 중'
-      if (profile?.personalityType && profile.personalityType !== '미분석') {
-        salesStyle = profile.personalityType
+      if (profile?.personality_type && profile.personality_type !== '미분석') {
+        salesStyle = profile.personality_type
       }
       
       return { 
@@ -765,7 +773,7 @@ app.get('/api/manager/planners', (c) => {
         name: u.name, 
         email: u.email, 
         phone: u.phone,
-        personalityType: profile?.personalityType || '미분석',
+        personalityType: profile?.personality_type || '미분석',
         salesStyle: salesStyle,
         experienceYears: experienceYears,
         experienceText: experienceText,
