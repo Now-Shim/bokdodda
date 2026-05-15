@@ -717,16 +717,58 @@ app.get('/api/manager/sessions', async (c) => {
 
 // 관리자 - 설계사 목록
 app.get('/api/manager/planners', (c) => {
+  const currentYear = new Date().getFullYear()
+  
   const planners = users
     .filter(u => u.role === 'planner')
     .map(u => {
       const profile = plannerProfiles.find(p => p.userId === u.id)
+      
+      // 경력 연수 자동 계산
+      let experienceYears = 0
+      if (profile?.careerStartYear) {
+        experienceYears = currentYear - parseInt(profile.careerStartYear) + 1
+      }
+      
+      // 전문 분야 자동 판단 (생보/손보 비중 기반)
+      let specialization = '미설정'
+      if (profile?.productRatio) {
+        const ratioMatch = profile.productRatio.match(/생보 (\d+)% \/ 손보 (\d+)%/)
+        if (ratioMatch) {
+          const lifeRatio = parseInt(ratioMatch[1])
+          const nonLifeRatio = parseInt(ratioMatch[2])
+          
+          if (lifeRatio >= 70) {
+            specialization = '생명보험'
+          } else if (nonLifeRatio >= 70) {
+            specialization = '손해보험'
+          } else if (Math.abs(lifeRatio - nonLifeRatio) <= 20) {
+            specialization = '통합형'
+          } else if (lifeRatio > nonLifeRatio) {
+            specialization = '생보 중심'
+          } else {
+            specialization = '손보 중심'
+          }
+        }
+      }
+      
+      // 영업 스타일 판단 (성향 기반)
+      let salesStyle = '분석 중'
+      if (profile?.personalityType && profile.personalityType !== '미분석') {
+        salesStyle = profile.personalityType
+      }
+      
       return { 
         userId: u.id,
         name: u.name, 
         email: u.email, 
         phone: u.phone,
-        ...profile 
+        personalityType: profile?.personalityType || '미분석',
+        salesStyle: salesStyle,
+        experienceYears: experienceYears,
+        specialization: specialization,
+        totalCoachingSessions: coachingSessions.filter(s => s.plannerId === u.id).length,
+        totalTrainingCompleted: 0 // TODO: 교육 이수 기능 추가 시 계산
       }
     })
   

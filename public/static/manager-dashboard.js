@@ -340,8 +340,38 @@ async function viewPlannerDetail(userId) {
         document.getElementById('detail-plannerName').textContent = user.name
         document.getElementById('detail-email').textContent = user.email
         document.getElementById('detail-phone').textContent = user.phone || '없음'
-        document.getElementById('detail-experience').textContent = profile.experienceYears ? (profile.experienceYears + '년') : '미설정'
-        document.getElementById('detail-specialization').textContent = profile.specialization || '미설정'
+        
+        // 경력 연수 자동 계산
+        let experienceText = '미설정'
+        if (profile.careerStartYear) {
+            const currentYear = new Date().getFullYear()
+            const experienceYears = currentYear - parseInt(profile.careerStartYear) + 1
+            experienceText = experienceYears + '년 (' + profile.careerStartYear + '년 시작)'
+        }
+        document.getElementById('detail-experience').textContent = experienceText
+        
+        // 전문 분야 자동 판단
+        let specializationText = '미설정'
+        if (profile.productRatio) {
+            const ratioMatch = profile.productRatio.match(/생보 (\d+)% \/ 손보 (\d+)%/)
+            if (ratioMatch) {
+                const lifeRatio = parseInt(ratioMatch[1])
+                const nonLifeRatio = parseInt(ratioMatch[2])
+                
+                if (lifeRatio >= 70) {
+                    specializationText = '생명보험 전문 (생보 ' + lifeRatio + '%)'
+                } else if (nonLifeRatio >= 70) {
+                    specializationText = '손해보험 전문 (손보 ' + nonLifeRatio + '%)'
+                } else if (Math.abs(lifeRatio - nonLifeRatio) <= 20) {
+                    specializationText = '통합형 (생보 ' + lifeRatio + '% / 손보 ' + nonLifeRatio + '%)'
+                } else if (lifeRatio > nonLifeRatio) {
+                    specializationText = '생보 중심 (생보 ' + lifeRatio + '%)'
+                } else {
+                    specializationText = '손보 중심 (손보 ' + nonLifeRatio + '%)'
+                }
+            }
+        }
+        document.getElementById('detail-specialization').textContent = specializationText
         
         // 성향 분석 표시
         displayPlannerPersonality(profile)
