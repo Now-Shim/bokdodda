@@ -48,15 +48,48 @@ async function loadProfile() {
         }
         
         // 경력 정보 업데이트
-        document.getElementById('careerStartYear').textContent = profile.careerStartYear || '-'
+        // 경력 연수 자동 계산
+        let experienceText = '-'
+        if (profile.careerStartYear) {
+            const currentYear = new Date().getFullYear()
+            const experienceYears = currentYear - parseInt(profile.careerStartYear) + 1
+            experienceText = experienceYears + '년 (' + profile.careerStartYear + '년 시작)'
+        }
+        document.getElementById('careerStartYear').textContent = experienceText
         document.getElementById('firstOrganization').textContent = profile.firstOrganization || '-'
         document.getElementById('careerPath').textContent = profile.careerPath || '-'
         
+        // 전문 분야 자동 판단 및 상품 비중 표시
         if (profile.productRatio) {
             const ratioMatch = profile.productRatio.match(/생보 (\d+)% \/ 손보 (\d+)%/)
             if (ratioMatch) {
-                document.getElementById('productRatioLife').textContent = ratioMatch[1] + '%'
-                document.getElementById('productRatioNonLife').textContent = ratioMatch[2] + '%'
+                const lifeRatio = parseInt(ratioMatch[1])
+                const nonLifeRatio = parseInt(ratioMatch[2])
+                
+                document.getElementById('productRatioLife').textContent = lifeRatio + '%'
+                document.getElementById('productRatioNonLife').textContent = nonLifeRatio + '%'
+                
+                // 전문 분야 판단 로직 (매니저 대시보드와 동일)
+                let specializationText = ''
+                if (lifeRatio >= 70) {
+                    specializationText = '생명보험 전문 (생보 ' + lifeRatio + '%)'
+                } else if (nonLifeRatio >= 70) {
+                    specializationText = '손해보험 전문 (손보 ' + nonLifeRatio + '%)'
+                } else if (Math.abs(lifeRatio - nonLifeRatio) <= 20) {
+                    specializationText = '통합형 (생보 ' + lifeRatio + '% / 손보 ' + nonLifeRatio + '%)'
+                } else {
+                    // 기타 경우 (21%~69% 차이)
+                    if (lifeRatio > nonLifeRatio) {
+                        specializationText = '생보 우위형 (생보 ' + lifeRatio + '% / 손보 ' + nonLifeRatio + '%)'
+                    } else {
+                        specializationText = '손보 우위형 (생보 ' + lifeRatio + '% / 손보 ' + nonLifeRatio + '%)'
+                    }
+                }
+                
+                // 전문 분야를 별도 영역에 표시 (현재는 상품 비중 영역에 추가)
+                console.log('[DEBUG] Specialization:', specializationText)
+                // Note: HTML에 전문 분야 표시 영역이 없으므로 콘솔에만 로그
+                // 필요시 HTML 수정하여 표시 영역 추가 가능
             }
         } else {
             document.getElementById('productRatioLife').textContent = '-'
