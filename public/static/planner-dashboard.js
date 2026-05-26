@@ -193,7 +193,7 @@ document.getElementById('coachingForm').addEventListener('submit', async (e) => 
             context,
             situationType
         }, {
-            timeout: 60000 // 60초 타임아웃 (AI 응답 대기)
+            timeout: 180000 // 180초 (3분) 타임아웃 - Gemini API 응답 대기
         })
         
         if (res.data.success) {

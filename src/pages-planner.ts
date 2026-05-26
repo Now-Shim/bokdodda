@@ -158,7 +158,7 @@ export const plannerPageHTML = `
                 </button>
                 <span id="loading" class="ml-4 hidden">
                     <div class="loading"></div> 
-                    <span id="loading-text">AI가 분석 중입니다... (약 30초 소요)</span>
+                    <span id="loading-text">AI가 분석 중입니다... (1~2분 소요)</span>
                 </span>
             </form>
         </div>
