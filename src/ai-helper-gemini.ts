@@ -208,7 +208,7 @@ JSON 형식으로 응답하세요.`
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 6000, // 4000 → 6000 (dialogue 완전 생성 보장)
+          maxOutputTokens: 8192, // Gemini 2.5 Flash 최대값 (완전한 응답 보장)
           topP: 0.9,
           topK: 40,
         }
