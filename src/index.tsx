@@ -196,17 +196,12 @@ app.post('/api/coaching-sessions', async (c) => {
       .map((kb: any) => `[${kb.category}] ${kb.title}\n${kb.content}`)
       .join('\n\n---\n\n')
     
-    // 외부 링크에서 관련 데이터 수집 (활성화된 링크만)
-    // Planner(설계사)용 링크만 가져오기: target_audience IN ('planner', 'both', null)
-    const linksResult = await c.env.DB.prepare(`
-      SELECT * FROM external_links 
-      WHERE is_active = 1 
-        AND (target_audience = 'planner' OR target_audience = 'both' OR target_audience IS NULL)
-      ORDER BY created_at DESC LIMIT 5
-    `).all()
+    // 외부 링크에서 관련 데이터 수집 - 임시 비활성화 (로컬 환경 DNS 이슈)
+    // TODO: Cloudflare Pages 배포 시 활성화
+    console.log('[AI Coaching] 외부 링크 크롤링 스킵 (로컬 환경)')
     
     let externalLinkData = ''
-    if (linksResult.results.length > 0) {
+    if (false) { // 임시 비활성화
       // 키워드 추출 (간단한 키워드 매칭)
       const keywords = context.toLowerCase().match(/[가-힣]{2,}/g) || []
       
