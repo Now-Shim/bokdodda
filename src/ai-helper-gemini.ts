@@ -433,6 +433,16 @@ JSON 형식으로 응답하세요.`
       keyPointsText = keyPointsText.join('\n')
     }
     
+    // 🔍 DEBUG: 파싱된 필드 확인
+    console.log('[Gemini AI] ========== 파싱 결과 디버깅 ==========')
+    console.log('[Gemini AI] parsed.analyzedQuestion:', typeof parsed.analyzedQuestion, parsed.analyzedQuestion?.substring?.(0, 100))
+    console.log('[Gemini AI] parsed.coachingPoint:', typeof parsed.coachingPoint, parsed.coachingPoint?.substring?.(0, 100))
+    console.log('[Gemini AI] parsed.coachingEvidence:', typeof parsed.coachingEvidence, parsed.coachingEvidence?.substring?.(0, 100))
+    console.log('[Gemini AI] parsed.dialogue:', typeof parsed.dialogue, Array.isArray(parsed.dialogue) ? '[Array]' : parsed.dialogue?.substring?.(0, 100))
+    console.log('[Gemini AI] parsed.actionGuidelines:', typeof parsed.actionGuidelines, parsed.actionGuidelines?.substring?.(0, 100))
+    console.log('[Gemini AI] parsed keys:', Object.keys(parsed))
+    console.log('[Gemini AI] ============================================')
+    
       // 성공 시 결과 반환
       return {
         // 새 구조 (3단계 분석 시스템)

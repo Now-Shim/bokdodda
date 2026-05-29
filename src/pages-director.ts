@@ -193,16 +193,11 @@ export function renderDirectorPage(c: Context) {
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
                     <select id="upload-category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="영업기법">📈 영업기법 (프로세스)</option>
-                        <option value="고객관리">🤝 고객관리 (관계구축)</option>
-                        <option value="상품관련">📋 상품관련 (최신소식지)</option>
-                        <option value="인문학-철학">🎓 인문학 - 철학</option>
-                        <option value="인문학-심리학">🧠 인문학 - 심리학</option>
-                        <option value="인문학-행동경제학">💡 인문학 - 행동경제학</option>
-                        <option value="인문학-게임이론">🎯 인문학 - 게임이론</option>
-                        <option value="인문학-뇌과학">🧬 인문학 - 뇌과학</option>
-                        <option value="인문학-코칭이론">💬 인문학 - 코칭이론</option>
-                        <option value="기타">📝 기타 (칼럼 등)</option>
+                        <option value="영업기법">📈 영업기법</option>
+                        <option value="고객관리">🤝 고객관리</option>
+                        <option value="상품관련">📋 상품관련(최신소식지)</option>
+                        <option value="인문학">🎓 인문학</option>
+                        <option value="기타">📝 기타</option>
                     </select>
                 </div>
                 
@@ -519,16 +514,11 @@ export function renderDirectorPage(c: Context) {
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
                     <select id="edit-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                        <option value="영업기법">📈 영업기법 (프로세스)</option>
-                        <option value="고객관리">🤝 고객관리 (관계구축)</option>
-                        <option value="상품관련">📋 상품관련 (최신소식지)</option>
-                        <option value="인문학-철학">🎓 인문학 - 철학</option>
-                        <option value="인문학-심리학">🧠 인문학 - 심리학</option>
-                        <option value="인문학-행동경제학">💡 인문학 - 행동경제학</option>
-                        <option value="인문학-게임이론">🎯 인문학 - 게임이론</option>
-                        <option value="인문학-뇌과학">🧬 인문학 - 뇌과학</option>
-                        <option value="인문학-코칭이론">💬 인문학 - 코칭이론</option>
-                        <option value="기타">📝 기타 (칼럼 등)</option>
+                        <option value="영업기법">📈 영업기법</option>
+                        <option value="고객관리">🤝 고객관리</option>
+                        <option value="상품관련">📋 상품관련(최신소식지)</option>
+                        <option value="인문학">🎓 인문학</option>
+                        <option value="기타">📝 기타</option>
                     </select>
                 </div>
                 
@@ -1486,7 +1476,7 @@ export function renderDirectorPage(c: Context) {
             }
         }
         
-        // 자료 목록 표시
+        // 자료 목록 표시 (카테고리별 구분)
         function displayKnowledge() {
             const container = document.getElementById('uploadedKnowledge')
             
@@ -1495,40 +1485,93 @@ export function renderDirectorPage(c: Context) {
                 return
             }
             
-            // 우선순위별로 정렬 (최우선 검토 먼저)
-            const sortedKnowledge = [...knowledgeBase].sort((a, b) => {
-                if (a.priority && !b.priority) return -1
-                if (!a.priority && b.priority) return 1
-                return new Date(b.uploadedAt) - new Date(a.uploadedAt)
+            // 카테고리 매핑 (기존 카테고리 → 5가지 섹터)
+            const categoryMapping = {
+                '영업기법': '영업기법',
+                '고객관리': '고객관리',
+                '상품관련': '상품관련(최신소식지)',
+                '인문학-코칭이론': '인문학',
+                '인문학': '인문학',
+                '기타': '기타'
+            }
+            
+            // 섹터 아이콘 및 색상
+            const sectorConfig = {
+                '영업기법': { icon: 'fa-chart-line', color: 'blue', bgColor: 'bg-blue-50', textColor: 'text-blue-800' },
+                '고객관리': { icon: 'fa-users', color: 'green', bgColor: 'bg-green-50', textColor: 'text-green-800' },
+                '상품관련(최신소식지)': { icon: 'fa-box', color: 'purple', bgColor: 'bg-purple-50', textColor: 'text-purple-800' },
+                '인문학': { icon: 'fa-book', color: 'amber', bgColor: 'bg-amber-50', textColor: 'text-amber-800' },
+                '기타': { icon: 'fa-folder', color: 'gray', bgColor: 'bg-gray-50', textColor: 'text-gray-800' }
+            }
+            
+            // 카테고리별로 그룹화
+            const groupedKnowledge = {}
+            knowledgeBase.forEach(k => {
+                const sector = categoryMapping[k.category] || '기타'
+                if (!groupedKnowledge[sector]) {
+                    groupedKnowledge[sector] = []
+                }
+                groupedKnowledge[sector].push(k)
             })
             
-            container.innerHTML = sortedKnowledge.map(k => \`
-                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition cursor-pointer" onclick="viewKnowledge(\${k.id})">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h5 class="font-bold text-gray-800 mb-1">
-                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2" title="최우선 검토"></i>' : ''}
-                                \${k.title}
-                                \${k.fileType === 'file' ? '<i class="fas fa-file-alt text-blue-500 ml-2" title="파일 업로드"></i>' : ''}
-                            </h5>
-                            <p class="text-xs text-gray-500 mb-2">
-                                <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">\${k.category}</span>
-                                <span class="ml-2">\${new Date(k.uploadedAt).toLocaleDateString('ko-KR')}</span>
-                                \${k.fileName ? \`<span class="ml-2 text-gray-400">📄 \${k.fileName} (\${formatFileSize(k.fileSize || 0)})</span>\` : ''}
-                            </p>
-                            <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
+            // 섹터 순서 정의
+            const sectorOrder = ['영업기법', '고객관리', '상품관련(최신소식지)', '인문학', '기타']
+            
+            // 각 섹터별로 HTML 생성
+            let html = ''
+            sectorOrder.forEach(sector => {
+                const items = groupedKnowledge[sector]
+                if (!items || items.length === 0) return
+                
+                const config = sectorConfig[sector]
+                
+                // 우선순위별로 정렬
+                const sortedItems = [...items].sort((a, b) => {
+                    if (a.priority && !b.priority) return -1
+                    if (!a.priority && b.priority) return 1
+                    return new Date(b.uploadedAt) - new Date(a.uploadedAt)
+                })
+                
+                html += \`
+                    <div class="mb-6">
+                        <div class="flex items-center mb-3 pb-2 border-b-2 border-\${config.color}-200">
+                            <i class="fas \${config.icon} text-\${config.color}-600 mr-2 text-lg"></i>
+                            <h5 class="font-bold text-\${config.color}-700 text-lg">\${sector}</h5>
+                            <span class="ml-2 text-sm \${config.textColor} bg-\${config.color}-100 px-2 py-0.5 rounded-full">\${sortedItems.length}개</span>
                         </div>
-                        <div class="flex gap-2 ml-4">
-                            <button onclick="event.stopPropagation(); editKnowledge(\${k.id})" class="text-blue-600 hover:text-blue-800 transition" title="수정">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="event.stopPropagation(); deleteKnowledge(\${k.id})" class="text-red-600 hover:text-red-800 transition" title="삭제">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div class="space-y-2">
+                            \${sortedItems.map(k => \`
+                                <div class="border border-\${config.color}-200 \${config.bgColor} rounded-lg p-4 hover:shadow-md transition cursor-pointer" onclick="viewKnowledge(\${k.id})">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <h5 class="font-bold text-gray-800 mb-1">
+                                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2" title="최우선 검토"></i>' : ''}
+                                                \${k.title}
+                                                \${k.fileType === 'file' ? '<i class="fas fa-file-alt text-blue-500 ml-2" title="파일 업로드"></i>' : ''}
+                                            </h5>
+                                            <p class="text-xs text-gray-500 mb-2">
+                                                <span class="ml-2">\${new Date(k.uploadedAt).toLocaleDateString('ko-KR')}</span>
+                                                \${k.fileName ? \`<span class="ml-2 text-gray-400">📄 \${k.fileName} (\${formatFileSize(k.fileSize || 0)})</span>\` : ''}
+                                            </p>
+                                            <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
+                                        </div>
+                                        <div class="flex gap-2 ml-4">
+                                            <button onclick="event.stopPropagation(); editKnowledge(\${k.id})" class="text-blue-600 hover:text-blue-800 transition" title="수정">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button onclick="event.stopPropagation(); deleteKnowledge(\${k.id})" class="text-red-600 hover:text-red-800 transition" title="삭제">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            \`).join('')}
                         </div>
                     </div>
-                </div>
-            \`).join('')
+                \`
+            })
+            
+            container.innerHTML = html
         }
         
         // 자료 삭제
