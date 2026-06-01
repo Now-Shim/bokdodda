@@ -7,8 +7,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "webapp-production",
-      "database_id": "local-webapp-production"
+      "database_name": "bokdodda-production",
+      "database_id": "a2f3272a-d253-4bdb-9f98-bd0398bdfa0d"
     }
   ],
   "vars": {
