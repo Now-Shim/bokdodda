@@ -1517,12 +1517,11 @@ export function renderDirectorPage(c: Context) {
             // 섹터 순서 정의
             const sectorOrder = ['영업기법', '고객관리', '상품관련(최신소식지)', '인문학', '기타']
             
-            // 각 섹터별로 HTML 생성
-            let html = ''
+            // 수평 레이아웃: 5개 컬럼으로 구성
+            let html = '<div class="grid grid-cols-5 gap-4">'
+            
             sectorOrder.forEach(sector => {
-                const items = groupedKnowledge[sector]
-                if (!items || items.length === 0) return
-                
+                const items = groupedKnowledge[sector] || []
                 const config = sectorConfig[sector]
                 
                 // 우선순위별로 정렬
@@ -1532,45 +1531,52 @@ export function renderDirectorPage(c: Context) {
                     return new Date(b.uploadedAt) - new Date(a.uploadedAt)
                 })
                 
+                // 각 카테고리 컬럼
                 html += \`
-                    <div class="mb-6">
-                        <div class="flex items-center mb-3 pb-2 border-b-2 border-\${config.color}-200">
-                            <i class="fas \${config.icon} text-\${config.color}-600 mr-2 text-lg"></i>
-                            <h5 class="font-bold text-\${config.color}-700 text-lg">\${sector}</h5>
-                            <span class="ml-2 text-sm \${config.textColor} bg-\${config.color}-100 px-2 py-0.5 rounded-full">\${sortedItems.length}개</span>
+                    <div class="flex flex-col">
+                        <!-- 카테고리 헤더 -->
+                        <div class="mb-3 pb-2 border-b-2 border-\${config.color}-300 sticky top-0 bg-white z-10">
+                            <div class="flex flex-col items-center text-center">
+                                <i class="fas \${config.icon} text-\${config.color}-600 text-2xl mb-1"></i>
+                                <h5 class="font-bold text-\${config.color}-700 text-sm">\${sector}</h5>
+                                <span class="text-xs \${config.textColor} bg-\${config.color}-100 px-2 py-0.5 rounded-full mt-1">\${sortedItems.length}개</span>
+                            </div>
                         </div>
-                        <div class="space-y-2">
-                            \${sortedItems.map(k => \`
-                                <div class="border border-\${config.color}-200 \${config.bgColor} rounded-lg p-4 hover:shadow-md transition cursor-pointer" onclick="viewKnowledge(\${k.id})">
-                                    <div class="flex justify-between items-start">
-                                        <div class="flex-1">
-                                            <h5 class="font-bold text-gray-800 mb-1">
-                                                \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-2" title="최우선 검토"></i>' : ''}
-                                                \${k.title}
-                                                \${k.fileType === 'file' ? '<i class="fas fa-file-alt text-blue-500 ml-2" title="파일 업로드"></i>' : ''}
-                                            </h5>
-                                            <p class="text-xs text-gray-500 mb-2">
-                                                <span class="ml-2">\${new Date(k.uploadedAt).toLocaleDateString('ko-KR')}</span>
-                                                \${k.fileName ? \`<span class="ml-2 text-gray-400">📄 \${k.fileName} (\${formatFileSize(k.fileSize || 0)})</span>\` : ''}
-                                            </p>
-                                            <p class="text-sm text-gray-700 line-clamp-2">\${k.content.substring(0, 150)}...</p>
-                                        </div>
-                                        <div class="flex gap-2 ml-4">
-                                            <button onclick="event.stopPropagation(); editKnowledge(\${k.id})" class="text-blue-600 hover:text-blue-800 transition" title="수정">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button onclick="event.stopPropagation(); deleteKnowledge(\${k.id})" class="text-red-600 hover:text-red-800 transition" title="삭제">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
+                        
+                        <!-- 자료 목록 (스크롤 가능) -->
+                        <div class="space-y-2 overflow-y-auto" style="max-height: calc(100vh - 300px);">
+                            \${sortedItems.length > 0 ? sortedItems.map(k => \`
+                                <div class="border border-\${config.color}-200 \${config.bgColor} rounded-lg p-3 hover:shadow-md transition cursor-pointer" onclick="viewKnowledge(\${k.id})">
+                                    <div class="mb-2">
+                                        <h6 class="font-bold text-gray-800 text-sm mb-1 line-clamp-2">
+                                            \${k.priority ? '<i class="fas fa-star text-yellow-500 mr-1 text-xs" title="최우선 검토"></i>' : ''}
+                                            \${k.title}
+                                        </h6>
+                                        <p class="text-xs text-gray-500">
+                                            \${new Date(k.uploadedAt).toLocaleDateString('ko-KR')}
+                                        </p>
+                                    </div>
+                                    <p class="text-xs text-gray-600 line-clamp-3 mb-2">\${k.content.substring(0, 80)}...</p>
+                                    <div class="flex justify-end gap-2">
+                                        <button onclick="event.stopPropagation(); editKnowledge(\${k.id})" class="text-blue-600 hover:text-blue-800 transition text-xs" title="수정">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="event.stopPropagation(); deleteKnowledge(\${k.id})" class="text-red-600 hover:text-red-800 transition text-xs" title="삭제">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
-                            \`).join('')}
+                            \`).join('') : \`
+                                <div class="text-center text-gray-400 text-xs py-4">
+                                    자료 없음
+                                </div>
+                            \`}
                         </div>
                     </div>
                 \`
             })
             
+            html += '</div>'
             container.innerHTML = html
         }
         
