@@ -77,17 +77,37 @@ app.use('/static/*', serveStatic({ root: './' }))
 
 // 로그인
 app.post('/api/login', async (c) => {
+  const { env } = c
   const { email, password } = await c.req.json()
-  const user = users.find(u => u.email === email && u.password === password)
   
-  if (!user) {
-    return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
+  try {
+    // D1 데이터베이스에서 사용자 조회
+    const userResult = await env.DB.prepare(`
+      SELECT id, email, name, role, password_hash FROM users WHERE email = ?
+    `).bind(email).first()
+    
+    if (!userResult) {
+      return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
+    }
+    
+    // 비밀번호 확인 (현재는 plain text, 실제로는 해시 비교해야 함)
+    if (userResult.password_hash !== password) {
+      return c.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
+    }
+    
+    return c.json({ 
+      success: true, 
+      user: { 
+        id: userResult.id, 
+        email: userResult.email, 
+        name: userResult.name, 
+        role: userResult.role 
+      }
+    })
+  } catch (error) {
+    console.error('[로그인 오류]:', error)
+    return c.json({ error: '로그인 처리 중 오류가 발생했습니다.' }, 500)
   }
-  
-  return c.json({ 
-    success: true, 
-    user: { id: user.id, email: user.email, name: user.name, role: user.role }
-  })
 })
 
 // 설계사 프로필 조회

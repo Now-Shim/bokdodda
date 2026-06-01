@@ -18,6 +18,37 @@ async function loadProfile() {
         console.log('[DEBUG] Profile API response:', res.data)
         const { profile } = res.data
         
+        console.log('[DEBUG] Profile data:', profile)
+        console.log('[DEBUG] experienceYears:', profile.experienceYears)
+        console.log('[DEBUG] salesStyle:', profile.salesStyle)
+        console.log('[DEBUG] specialization:', profile.specialization)
+        
+        // 기본 프로필 정보 업데이트 (상단 카드)
+        const experienceEl = document.getElementById('profileExperienceYears')
+        const salesStyleEl = document.getElementById('profileSalesStyle')
+        const specializationEl = document.getElementById('profileSpecialization')
+        const personalityEl = document.getElementById('profilePersonalityType')
+        const strengthsEl = document.getElementById('profileStrengths')
+        const weaknessesEl = document.getElementById('profileWeaknesses')
+        
+        console.log('[DEBUG] Elements found:', {
+            experienceEl: !!experienceEl,
+            salesStyleEl: !!salesStyleEl,
+            specializationEl: !!specializationEl,
+            personalityEl: !!personalityEl,
+            strengthsEl: !!strengthsEl,
+            weaknessesEl: !!weaknessesEl
+        })
+        
+        if (experienceEl) experienceEl.textContent = profile.experienceYears ? profile.experienceYears + '년' : '-'
+        if (salesStyleEl) salesStyleEl.textContent = profile.salesStyle || '-'
+        if (specializationEl) specializationEl.textContent = profile.specialization || '-'
+        if (personalityEl) personalityEl.textContent = profile.personalityType || '미분석'
+        if (strengthsEl) strengthsEl.textContent = profile.strengths || '-'
+        if (weaknessesEl) weaknessesEl.textContent = profile.weaknesses || '-'
+        
+        console.log('[DEBUG] Profile info updated')
+        
         // 성향 정보 업데이트 (실제 분석 완료된 경우만)
         if (profile.personalityType && profile.personalityType !== '미분석' && profile.energyDirection) {
             const statusElement = document.getElementById('personalityStatus')

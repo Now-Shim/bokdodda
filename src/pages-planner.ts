@@ -61,6 +61,47 @@ export const plannerPageHTML = `
             </div>
         </div>
         
+        <!-- 기본 프로필 정보 섹션 (DB에 이미 저장된 정보) -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-user-circle mr-2 text-purple-600"></i>기본 프로필
+                </h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                    <p class="text-sm text-blue-700 font-semibold mb-1">경력 연수</p>
+                    <p id="profileExperienceYears" class="text-2xl font-bold text-blue-900">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+                    <p class="text-sm text-green-700 font-semibold mb-1">영업 스타일</p>
+                    <p id="profileSalesStyle" class="text-2xl font-bold text-green-900">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                    <p class="text-sm text-purple-700 font-semibold mb-1">전문 분야</p>
+                    <p id="profileSpecialization" class="text-2xl font-bold text-purple-900">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+                    <p class="text-sm text-orange-700 font-semibold mb-1">성향 타입</p>
+                    <p id="profilePersonalityType" class="text-2xl font-bold text-orange-900">-</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border border-teal-200">
+                    <p class="text-sm text-teal-700 font-semibold mb-2">
+                        <i class="fas fa-star mr-1"></i>강점
+                    </p>
+                    <p id="profileStrengths" class="text-gray-800 leading-relaxed">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-rose-50 to-rose-100 p-4 rounded-lg border border-rose-200">
+                    <p class="text-sm text-rose-700 font-semibold mb-2">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>개선 필요 영역
+                    </p>
+                    <p id="profileWeaknesses" class="text-gray-800 leading-relaxed">-</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- 경력 정보 & 개인정보 섹션 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- 경력 정보 -->
@@ -532,7 +573,7 @@ export const plannerPageHTML = `
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script src="/static/planner-dashboard.js"></script>
+    <script src="/static/planner-dashboard.js?v=3"></script>
 </body>
 </html>
 `
