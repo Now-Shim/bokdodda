@@ -67,14 +67,14 @@ export interface CoachingResponse {
 export async function generateAICoaching(request: CoachingRequest): Promise<CoachingResponse> {
   const { context, situationType, plannerProfile, directorKnowledge, env } = request
 
-  // API 키 가져오기 (OpenRouter)
-  const apiKey = env?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || 'sk-or-v1-15a...abf'
-  const baseURL = env?.OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || 'https://openrouter.ai/api/v1'
+  // API 키 가져오기 (GenSpark LLM Proxy)
+  const apiKey = env?.OPENAI_API_KEY || env?.GENSPARK_TOKEN || process.env.OPENAI_API_KEY || process.env.GENSPARK_TOKEN
+  const baseURL = env?.OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
   
-  console.log('[AI Helper] OpenRouter API 설정:', {
+  console.log('[AI Helper] GenSpark LLM Proxy 설정:', {
     hasEnv: !!env,
     hasApiKey: !!apiKey,
-    keyPrefix: apiKey.substring(0, 15),
+    keyPrefix: apiKey?.substring(0, 15),
     baseURL
   })
 
@@ -309,7 +309,7 @@ JSON 형식으로 응답하세요.`
 
   try {
     const completion = await client.chat.completions.create({
-      model: 'openai/gpt-4o',
+      model: 'deep-seek-v4-flash', // GenSpark LLM Proxy allowed model
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

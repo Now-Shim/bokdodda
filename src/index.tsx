@@ -25,6 +25,11 @@ async function loadSessionsFromD1(env: any) {
     coachingSessions.length = 0
     
     // D1 데이터를 메모리로 로드
+    // string "null" 값을 실제 null로 변환하는 헬퍼 함수
+    const sanitizeNull = (value: any) => {
+      return value === "null" || value === null || value === undefined ? null : value
+    }
+    
     for (const row of result.results) {
       coachingSessions.push({
         id: row.id,
@@ -35,27 +40,28 @@ async function loadSessionsFromD1(env: any) {
         category: row.category,
         keyPoints: row.key_points,
         coachingPoint: row.coaching_point,
-        coachingEvidence: row.coaching_evidence,
-        dialogue: row.dialogue,
-        learningNeeds: row.learning_needs,
-        actionGuidelines: row.action_guidelines,
+        // string "null" 값을 실제 null로 변환
+        coachingEvidence: sanitizeNull(row.coaching_evidence),
+        dialogue: sanitizeNull(row.dialogue),
+        learningNeeds: sanitizeNull(row.learning_needs),
+        actionGuidelines: sanitizeNull(row.action_guidelines),
         references: row.reference_sources ? JSON.parse(row.reference_sources) : [],
-        aiAnalysis: row.ai_analysis,
-        coachingAdvice: row.coaching_advice,
-        recommendedApproach: row.recommended_approach,
-        tacitKnowledge: row.tacit_knowledge_applied,
+        aiAnalysis: sanitizeNull(row.ai_analysis),
+        coachingAdvice: sanitizeNull(row.coaching_advice),
+        recommendedApproach: sanitizeNull(row.recommended_approach),
+        tacitKnowledge: sanitizeNull(row.tacit_knowledge_applied),
         sessionDate: row.session_date,
         isShared: row.is_shared === 1,
         isValidated: row.is_validated === 1,
         useForLearning: row.use_for_learning === 1,
-        plannerFeedback: row.planner_feedback,
+        plannerFeedback: sanitizeNull(row.planner_feedback),
         effectivenessRating: row.effectiveness_rating,
-        directorFeedback: row.director_feedback,
-        director30YearsKnowledge: row.director_30years_knowledge,
+        directorFeedback: sanitizeNull(row.director_feedback),
+        director30YearsKnowledge: sanitizeNull(row.director_30years_knowledge),
         directorRating: row.director_rating,
-        managerNote: row.manager_note,
-        managerAIAdvice: row.manager_ai_advice,
-        managerRequest: row.manager_request,
+        managerNote: sanitizeNull(row.manager_note),
+        managerAIAdvice: sanitizeNull(row.manager_ai_advice),
+        managerRequest: sanitizeNull(row.manager_request),
         conversationMessages: []
       })
     }
@@ -278,35 +284,10 @@ app.post('/api/coaching-sessions', async (c) => {
     // 통합된 지식 자료
     const combinedKnowledge = directorKnowledge + externalLinkData
     
-    // AI 코칭 생성 (Gemini 우선, 폴백 OpenRouter)
+    // AI 코칭 생성 (GenSpark LLM Proxy 사용 - Gemini API 키 유출로 인한 임시 조치)
     let aiResponse
     try {
-      console.log('[AI Coaching] Gemini API 사용 시도...')
-      aiResponse = await generateAICoachingWithGemini({
-        context,
-        situationType,
-        plannerProfile: {
-          name: user.name,
-          personalityType: profile.personalityType,
-          salesStyle: profile.salesStyle,
-          experienceYears: profile.experienceYears,
-          specialization: profile.specialization,
-          strengths: profile.strengths,
-          weaknesses: profile.weaknesses,
-        },
-        directorKnowledge: combinedKnowledge,
-        env: c.env
-      })
-      console.log('[AI Coaching] ✅ Gemini API 성공')
-    } catch (geminiError: any) {
-      console.error('[AI Coaching] ⚠️ Gemini API 실패:', geminiError)
-      console.error('[AI Coaching] 에러 상세:', JSON.stringify({
-        message: geminiError?.message || 'Unknown',
-        stack: geminiError?.stack?.substring(0, 500) || 'No stack',
-        status: geminiError?.status,
-        response: geminiError?.response
-      }, null, 2))
-      console.warn('[AI Coaching] OpenRouter 폴백 시작...')
+      console.log('[AI Coaching] GenSpark LLM Proxy 사용 시도...')
       aiResponse = await generateAICoaching({
         context,
         situationType,
@@ -322,7 +303,29 @@ app.post('/api/coaching-sessions', async (c) => {
         directorKnowledge: combinedKnowledge,
         env: c.env
       })
-      console.log('[AI Coaching] ✅ OpenRouter 폴백 성공')
+      console.log('[AI Coaching] ✅ GenSpark LLM Proxy 성공')
+    } catch (error: any) {
+      console.error('[AI Coaching] ❌ AI 코칭 생성 실패:', error)
+      console.error('[AI Coaching] 에러 상세:', JSON.stringify({
+        message: error?.message || 'Unknown',
+        stack: error?.stack?.substring(0, 500) || 'No stack',
+      }, null, 2))
+      
+      // 에러 발생 시 기본 응답 반환
+      aiResponse = {
+        analyzedQuestion: `${user.name} 설계사의 ${situationType} 상황 분석`,
+        category: '기타',
+        keyPoints: `${profile.personalityType} 성향 맞춤 코칭이 필요합니다.\n강점: ${profile.strengths}\n약점: ${profile.weaknesses}`,
+        coachingPoint: '현재 AI 서비스에 일시적인 문제가 있습니다. 기본 분석을 제공합니다.',
+        coachingEvidence: '30년 노하우 기반 기본 코칭을 제공합니다.',
+        dialogue: `설계사: "${context} 관련하여 도움을 드리고자 합니다."\n고객: "네, 궁금한 점이 많습니다."\n설계사: "천천히 하나씩 설명드리겠습니다."`,
+        learningNeeds: `${profile.specialization} 분야 심화 학습`,
+        actionGuidelines: '1. 고객과의 신뢰 관계 구축\n2. 니즈 파악 및 경청\n3. 맞춤형 솔루션 제안',
+        references: [],
+        aiAnalysis: context,
+        coachingAdvice: '기본 코칭 조언을 제공합니다.',
+        tacitKnowledge: '30년 노하우를 바탕으로 한 기본 접근법'
+      }
     }
     
     const newSession: CoachingSession = {
@@ -572,16 +575,34 @@ app.post('/api/coaching-sessions/:id/conversation', async (c) => {
       .map(msg => `${msg.sender === 'planner' ? '설계사' : 'AI 코치'}: ${msg.message}`)
       .join('\n')
     
-    // Gemini API를 사용하여 대화형 답변 생성
-    const GEMINI_API_KEY = c.env.GEMINI_API_KEY
+    // GenSpark LLM Proxy를 사용하여 대화형 답변 생성 (Gemini API 키 유출로 인한 임시 조치)
+    const OPENAI_API_KEY = c.env.OPENAI_API_KEY || c.env.GENSPARK_TOKEN
+    const OPENAI_BASE_URL = c.env.OPENAI_BASE_URL
     
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not configured')
+    console.log('[Conversation] API Key exists:', !!OPENAI_API_KEY)
+    console.log('[Conversation] Base URL:', OPENAI_BASE_URL)
+    
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not configured')
     }
     
-    const conversationPrompt = `당신은 30년 경력의 보험 설계사 코치입니다.
+    const systemPrompt = `당신은 30년 경력의 보험 설계사 코치 '변방의 장수'입니다.
+설계사의 추가 질문에 대해 매우 상세하고 명확한 답변을 제공합니다.
 
-[기존 코칭 세션]
+**답변 지침:**
+1. 위 추가 질문에 대해 **매우 상세하고 명확하게** 답변하세요
+2. 기존 코칭 내용과 연관지어 심층적으로 설명하세요
+3. 반드시 구체적인 근거를 제시하세요:
+   - 약관: 보험사명, 상품명, 조항 (예: 제X조 X항)
+   - 의료정보: KCD-10 질병코드, 치료 과정
+   - 법률: 보험업법 제XX조, 금융감독원 규정
+   - 통계: 출처, 연도, 구체적 수치
+4. 일반 대화체로 답변하세요 (JSON 형식 사용 금지)
+5. **최소 1000자 이상, 가능하면 1500-2000자로 충분히 상세하게 답변하세요**
+6. 답변이 짧으면 안 됩니다. 충분히 길고 자세하게 작성하세요.
+7. 실제 사례, 구체적인 수치, 단계별 설명을 포함하세요.`
+
+    const conversationPrompt = `[기존 코칭 세션]
 - 원래 질문: ${session.context}
 - 상황 유형: ${session.situationType}
 - AI 분석: ${session.analyzedQuestion || session.aiAnalysis}
@@ -592,50 +613,36 @@ ${session.coachingEvidence ? `- 코칭 근거: ${session.coachingEvidence}` : ''
 ${conversationHistory}
 
 [설계사 추가 질문]
-${message}
+${message}`
 
-**답변 지침:**
-1. 위 추가 질문에 대해 **매우 상세하고 명확하게** 답변해주세요
-2. 기존 코칭 내용과 연관지어 심층적으로 설명하세요
-3. 반드시 구체적인 근거를 제시하세요:
-   - 약관: 보험사명, 상품명, 조항 (예: 제X조 X항)
-   - 의료정보: KCD-10 질병코드, 치료 과정
-   - 법률: 보험업법 제XX조, 금융감독원 규정
-   - 통계: 출처, 연도, 구체적 수치
-4. 일반 대화체로 답변하세요 (JSON 형식 사용 금지)
-5. **최소 1000자 이상, 가능하면 1500-2000자로 충분히 상세하게 답변하세요**
-6. 답변이 짧으면 안 됩니다. 충분히 길고 자세하게 작성하세요.
-7. 실제 사례, 구체적인 수치, 단계별 설명을 포함하세요.
-
-**매우 중요: 답변은 반드시 1000자 이상이어야 합니다. 짧은 답변은 절대 안 됩니다.**
-
-답변만 작성하고, 다른 설명은 추가하지 마세요.`
-
-    const conversationResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    console.log('[Conversation] Calling LLM API...')
+    const conversationResponse = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: conversationPrompt }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 4000, // 2000 → 4000 (추가 질문 답변 더 길게)
-          topP: 0.9,
-          topK: 40
-        }
+        model: 'deep-seek-v4-flash', // GenSpark LLM Proxy allowed model
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: conversationPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000
       })
     })
     
+    console.log('[Conversation] API Response Status:', conversationResponse.status)
+    
     if (!conversationResponse.ok) {
-      throw new Error(`Gemini API 오류: ${conversationResponse.status}`)
+      const errorText = await conversationResponse.text()
+      console.error('[Conversation] API 오류 응답:', errorText.substring(0, 500))
+      throw new Error(`LLM API 오류: ${conversationResponse.status}`)
     }
     
     const conversationData = await conversationResponse.json()
-    const aiMessageText = conversationData.candidates?.[0]?.content?.parts?.[0]?.text || '죄송합니다. 답변을 생성하는 중 오류가 발생했습니다.'
+    const aiMessageText = conversationData.choices?.[0]?.message?.content || '죄송합니다. 답변을 생성하는 중 오류가 발생했습니다.'
     
     // AI 메시지 추가
     const aiMessage = {
@@ -651,9 +658,17 @@ ${message}
       aiResponse: aiMessageText,
       conversationMessages: session.conversationMessages
     })
-  } catch (error) {
-    console.error('대화 처리 오류:', error)
-    return c.json({ error: '대화 처리 중 오류가 발생했습니다.' }, 500)
+  } catch (error: any) {
+    console.error('[Conversation] 대화 처리 오류:', error)
+    console.error('[Conversation] 에러 상세:', {
+      message: error?.message,
+      stack: error?.stack?.substring(0, 500),
+      name: error?.name
+    })
+    return c.json({ 
+      error: '대화 처리 중 오류가 발생했습니다.',
+      details: error?.message 
+    }, 500)
   }
 })
 
