@@ -11,48 +11,56 @@
 - **핵심 가치**: 재학습(Relearning)을 통한 플랫폼 독자적 진화
 
 ## 🌐 접속 정보
-**메인 URL**: https://3000-iuxxx5vpsdpcjyti6fmff-a402f90a.sandbox.novita.ai
+**프로덕션 URL**: https://bokdodda.pages.dev  
+**최신 배포**: https://eb26f5ba.bokdodda.pages.dev  
+**GitHub**: https://github.com/Now-Shim/bokdodda.git
 
 ### 데모 계정
 ```
 Director:  director@bukdotda.com / director123
 관리자:    manager@bukdotda.com / demo123
 설계사01:  planner01@bukdotda.com / demo123
+(김설계 - 프로필 테스트 데이터 포함)
 설계사02:  planner02@bukdotda.com / demo123
 ...
 설계사10:  planner10@bukdotda.com / demo123
 ```
 
-## ✅ 최신 업데이트 (2026-04-24)
+## ✅ 최신 업데이트 (2026-06-05)
 
 ### 🎯 완료된 작업
-1. **Manager 대시보드 완전 수정** ✅
-   - 세션 목록 렌더링 null safety 처리
-   - TypeError 에러 완전 해결
-   - 세션 목록 정상 표시 확인
-   
-2. **Manager AI 분석 기능 정상화** ✅
-   - Gemini API 모델 통일 (gemini-2.5-flash)
-   - D1 데이터베이스 마이그레이션 완료
-   - 10개 테이블 생성 (knowledge_base, external_links 등)
-   
-3. **정규표현식 렌더링 문제 해결** ✅
-   - HTML에서 `\n` 이스케이프 처리
-   - JavaScript 구문 오류 수정
-   
-4. **D1 데이터베이스 초기화** ✅
-   - 사용자 데이터 (Director 1명, Manager 1명, Planner 10명)
-   - 코칭 세션 2건 (이영수)
-   - Planner 프로필 2건
+1. **AI 코칭 환경 변수 문제 해결** ✅
+   - GenSpark LLM Proxy 연동 완료
+   - wrangler.jsonc에 GENSPARK_TOKEN, OPENAI_API_KEY, OPENAI_BASE_URL 설정
+   - 프로덕션 환경 AI 코칭 정상 작동 확인
+
+2. **프로필 데이터 자동 초기화 시스템** ✅
+   - 관리자 API 추가: `/api/admin/init-profile/:userId`
+   - 프로덕션 DB에 테스트 프로필 데이터 자동 삽입
+   - 경력 정보, 개인정보 정상 표시 확인
+
+3. **프로필 정보 표시 문제 해결** ✅
+   - 경력 정보: 모범 업무 시작 년도, 최초 시작 조직
+   - 개인정보: 나이(호칭부도), 성별, 결혼 여부
+   - 데이터베이스 필드 매핑 정상화
+
+4. **GitHub 리포지토리 연동** ✅
+   - 리포지토리: https://github.com/Now-Shim/bokdodda.git
+   - Git 이력 완전 보존
+   - 프로덕션 배포 자동화
 
 ### 🧪 테스트 완료
 | 기능 | 상태 |
 |------|------|
 | Manager 대시보드 로딩 | ✅ 정상 |
-| 세션 목록 표시 | ✅ 2개 표시 |
+| 세션 목록 표시 | ✅ 정상 |
 | Manager AI 분석 | ✅ 작동 |
 | Director 대시보드 | ✅ 정상 |
 | Planner 대시보드 | ✅ 정상 |
+| **AI 코칭 (프로덕션)** | ✅ 정상 작동 |
+| **프로필 정보 표시** | ✅ 정상 표시 |
+| **경력 정보 자동 계산** | ✅ 정상 (10년 경력) |
+| **개인정보 표시** | ✅ 정상 (42세, 여성, 기혼) |
 
 ## 📦 백업 정보
 - **백업 파일**: https://www.genspark.ai/api/files/s/DW7xMm8K
@@ -195,6 +203,9 @@ npx wrangler d1 execute webapp-production --local --command="SELECT COUNT(*) FRO
 - `GET /api/manager/planners` - 설계사 목록
 - `POST /api/manager/advice/:id` - **Manager AI 역할 분석** ⭐
 - `POST /api/manager/action` - Manager 조치 기록
+
+### 관리자 전용 (Admin API)
+- `POST /api/admin/init-profile/:userId` - 프로필 데이터 초기화 (개발/테스트용)
 
 ### Director
 - `GET /api/director/dashboard` - 통계 대시보드
@@ -390,8 +401,9 @@ adf054e 🐛 Manager AI 디버깅 로그 추가
 
 ---
 
-**제작**: 변방의 장수 (교육센터장) x Genspark AI
-**최종 업데이트**: 2026년 4월 24일 (금)
-**버전**: Phase 2.5 - Manager AI 완전 안정화 🚀✅
+**제작**: 변방의 장수 (교육센터장) x Genspark AI  
+**최종 업데이트**: 2026년 6월 5일 (목)  
+**버전**: Phase 3 - 프로덕션 배포 완료 + 프로필 시스템 정상화 🚀✅
 
-**다음 만남**: 늦어도 월요일 (2026-04-28) 👋
+**프로덕션 URL**: https://bokdodda.pages.dev  
+**GitHub**: https://github.com/Now-Shim/bokdodda.git
