@@ -2665,6 +2665,78 @@ app.get('/api/insurance/news', async (c) => {
   }
 })
 
+// 임시 관리자 API - 프로필 데이터 초기화 (개발/테스트용)
+app.post('/api/admin/init-profile/:userId', async (c) => {
+  const { env } = c
+  const userId = parseInt(c.req.param('userId'))
+  
+  try {
+    // 프로필이 존재하는지 확인
+    const existingProfile = await env.DB.prepare(`
+      SELECT * FROM planner_profiles WHERE user_id = ?
+    `).bind(userId).first()
+    
+    if (!existingProfile) {
+      // 프로필이 없으면 새로 생성
+      console.log('[관리자] 프로필 생성 중 - user_id:', userId)
+      await env.DB.prepare(`
+        INSERT INTO planner_profiles (
+          user_id, 
+          personality_type, 
+          sales_style, 
+          experience_years, 
+          specialization,
+          career_start_year,
+          first_organization,
+          career_path,
+          product_ratio,
+          birth_year,
+          gender,
+          marital_status
+        ) VALUES (?, '미분석', '미설정', 10, '통합형', 2015, '삼성생명', '삼성생명 → 교보생명 → 현대해상', '생보 60% / 손보 40%', 1985, '여성', '기혼')
+      `).bind(userId).run()
+    } else {
+      // 프로필이 있으면 업데이트
+      console.log('[관리자] 프로필 업데이트 중 - user_id:', userId)
+      await env.DB.prepare(`
+        UPDATE planner_profiles 
+        SET 
+          career_start_year = 2015,
+          first_organization = '삼성생명',
+          career_path = '삼성생명 → 교보생명 → 현대해상',
+          product_ratio = '생보 60% / 손보 40%',
+          birth_year = 1985,
+          gender = '여성',
+          marital_status = '기혼',
+          experience_years = 10,
+          specialization = '통합형',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).bind(userId).run()
+    }
+    
+    // 업데이트된 프로필 조회
+    const updatedProfile = await env.DB.prepare(`
+      SELECT * FROM planner_profiles WHERE user_id = ?
+    `).bind(userId).first()
+    
+    console.log('[관리자] 프로필 초기화 완료 - user_id:', userId)
+    
+    return c.json({ 
+      success: true, 
+      message: '프로필 데이터가 초기화되었습니다.',
+      profile: updatedProfile
+    })
+    
+  } catch (error) {
+    console.error('[관리자] 프로필 초기화 오류:', error)
+    return c.json({ 
+      error: '프로필 초기화 중 오류가 발생했습니다.',
+      details: error.message 
+    }, 500)
+  }
+})
+
 export default app
 
 // ============== Frontend Routes ==============
