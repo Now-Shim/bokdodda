@@ -165,39 +165,61 @@ async function loadSessions() {
             return
         }
         
+        // 유형별로 그룹화
+        const groupedSessions = {}
         sessions.forEach(s => {
-            const sessionDiv = document.createElement('div')
-            sessionDiv.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer transition'
-            sessionDiv.onclick = () => viewSession(s.id)
+            if (!groupedSessions[s.situationType]) {
+                groupedSessions[s.situationType] = []
+            }
+            groupedSessions[s.situationType].push(s)
+        })
+        
+        // 유형별 색상 매핑
+        const typeColors = {
+            '신규고객': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-500' },
+            '기존고객': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500' },
+            '계약전환': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500' },
+            '민원처리': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500' },
+            '팀관리': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-500' }
+        }
+        
+        // 유형별로 수평 렌더링
+        Object.keys(groupedSessions).forEach(type => {
+            const typeSection = document.createElement('div')
+            typeSection.className = 'mb-6'
             
-            sessionDiv.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">${escapeHtml(s.situationType)}</span>
-                    <span class="text-sm text-gray-500">${new Date(s.sessionDate).toLocaleDateString('ko-KR')}</span>
+            const color = typeColors[type] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-500' }
+            
+            typeSection.innerHTML = `
+                <h3 class="text-lg font-bold mb-3 ${color.text} flex items-center">
+                    <i class="fas fa-folder-open mr-2"></i>${type} (${groupedSessions[type].length})
+                </h3>
+                <div class="flex overflow-x-auto gap-4 pb-3" style="scroll-behavior: smooth;">
+                    ${groupedSessions[type].map(s => {
+                        const contextText = escapeHtml(s.context.substring(0, 80) + (s.context.length > 80 ? '...' : ''))
+                        const ratingHTML = s.effectivenessRating 
+                            ? `<div class="flex items-center text-yellow-500 text-sm">${'⭐'.repeat(s.effectivenessRating)}</div>`
+                            : '<span class="text-gray-400 text-xs">피드백 대기 중</span>'
+                        
+                        return `
+                            <div class="flex-shrink-0 w-72 border ${color.border} ${color.bg} rounded-lg p-4 hover:shadow-lg cursor-pointer transition" onclick="viewSession(${s.id})">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="${color.bg} ${color.text} px-2 py-1 rounded-full text-xs font-semibold">${escapeHtml(s.situationType)}</span>
+                                    <span class="text-xs text-gray-600">${new Date(s.sessionDate).toLocaleDateString('ko-KR')}</span>
+                                </div>
+                                <p class="text-gray-700 text-sm font-medium mb-3 line-clamp-3">${contextText}</p>
+                                <div class="mt-2">
+                                    ${ratingHTML}
+                                </div>
+                            </div>
+                        `
+                    }).join('')}
                 </div>
-                <p class="text-gray-700 font-semibold mb-2" id="context-${s.id}"></p>
-                <div id="rating-${s.id}"></div>
             `
             
-            // 안전하게 텍스트 삽입
-            const contextEl = sessionDiv.querySelector("#context-" + s.id)
-            const contextText = s.context.substring(0, 100) + (s.context.length > 100 ? '...' : '')
-            contextEl.textContent = contextText
-            
-            // 별점 표시
-            const ratingEl = sessionDiv.querySelector("#rating-" + s.id)
-            if (s.effectivenessRating) {
-                ratingEl.innerHTML = `
-                    <div class="flex items-center text-yellow-500">
-                        ${'<i class="fas fa-star"></i>'.repeat(s.effectivenessRating)}
-                    </div>
-                `
-            } else {
-                ratingEl.innerHTML = '<span class="text-gray-400 text-sm">피드백 대기 중</span>'
-            }
-            
-            sessionsList.appendChild(sessionDiv)
+            sessionsList.appendChild(typeSection)
         })
+        
         console.log('[DEBUG] Sessions rendered successfully')
     } catch (error) { 
         console.error('[DEBUG] Sessions load error:', error)

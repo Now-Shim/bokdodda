@@ -161,74 +161,81 @@ function displaySessions(sessions) {
     
     console.log('[Manager] 세션 렌더링 시작...')
     
-    container.innerHTML = sessions.map(session => {
-        const planner = allPlanners.find(p => p.id === session.plannerId)
-        const plannerName = planner ? planner.name : '알 수 없음'
-        const hasManagerAction = (session.managerAIAdvice && session.managerAIAdvice.length > 0) || (session.managerNote && session.managerNote.length > 0)
-            
-        return `
-            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <p class="text-sm text-gray-500 mb-1">${new Date(session.sessionDate).toLocaleDateString('ko-KR')} ${new Date(session.sessionDate).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</p>
-                        <h4 class="text-lg font-bold text-gray-800 mb-2">
-                            <i class="fas fa-user-circle mr-2 text-blue-600"></i>${plannerName}
-                        </h4>
-                        <div class="flex gap-2">
-                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">${session.situationType}</span>
-                            ${hasManagerAction ? '<span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full"><i class="fas fa-user-cog mr-1"></i>Manager 역할 분석됨</span>' : ''}
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        ${session.effectivenessRating ? '<p class="text-sm text-gray-600">설계사 평가: <span class="font-bold text-yellow-600">' + '⭐'.repeat(session.effectivenessRating) + '</span></p>' : ''}
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-question-circle mr-2 text-blue-600"></i>설계사의 질문</p>
-                    <p class="text-gray-700 bg-blue-50 p-3 rounded border-l-4 border-blue-500">${session.context}</p>
-                </div>
-                
-                <div class="mb-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-comments mr-2 text-green-600"></i>AI 코칭 내용</p>
-                    <p class="text-gray-700 bg-green-50 p-3 rounded border-l-4 border-green-500 whitespace-pre-wrap">${session.coachingAdvice ? session.coachingAdvice.substring(0, 200) + '...' : '코칭 내용 없음'}</p>
-                </div>
-                
-                ${session.managerRequest ? `
-                <div class="mb-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-hand-point-right mr-2 text-purple-600"></i>매니저 요청 사항
-                    </p>
-                    <p class="text-gray-700 bg-purple-50 p-3 rounded border-l-4 border-purple-500">${session.managerRequest}</p>
-                </div>
-                ` : ''}
-                
-                ${session.managerAIAdvice ? `
-                <div class="mb-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-user-cog mr-2 text-orange-600"></i>Manager 추가 역할 (AI 분석)
-                    </p>
-                    <p class="text-gray-700 bg-orange-50 p-3 rounded border-l-4 border-orange-500 whitespace-pre-wrap">${(session.managerAIAdvice || '').substring(0, 200)}...</p>
-                </div>
-                ` : ''}
-                
-                ${session.managerNote ? `
-                <div class="mb-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-gray-600"></i>추가 메모
-                    </p>
-                    <p class="text-gray-700 bg-gray-50 p-3 rounded border-l-4 border-gray-500">${session.managerNote}</p>
-                </div>
-                ` : ''}
-                
-                <div class="flex gap-3 mt-4">
-                    <button onclick="openNoteModal(${session.id})" class="flex-1 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold shadow-lg">
-                        <i class="fas fa-${hasManagerAction ? 'edit' : 'plus-circle'} mr-2"></i>${hasManagerAction ? 'Manager 역할 수정' : 'Manager 역할 분석'}
-                    </button>
+    // 유형별로 그룹화
+    const groupedSessions = {}
+    sessions.forEach(s => {
+        if (!groupedSessions[s.situationType]) {
+            groupedSessions[s.situationType] = []
+        }
+        groupedSessions[s.situationType].push(s)
+    })
+    
+    // 유형별 색상 매핑
+    const typeColors = {
+        '신규고객': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-500' },
+        '기존고객': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500' },
+        '계약전환': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500' },
+        '민원처리': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500' },
+        '팀관리': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-500' }
+    }
+    
+    // 유형별로 수평 렌더링
+    let html = ''
+    Object.keys(groupedSessions).forEach(type => {
+        const color = typeColors[type] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-500' }
+        
+        html += `
+            <div class="mb-6">
+                <h3 class="text-lg font-bold mb-3 ${color.text} flex items-center">
+                    <i class="fas fa-folder-open mr-2"></i>${type} (${groupedSessions[type].length})
+                </h3>
+                <div class="flex overflow-x-auto gap-4 pb-3" style="scroll-behavior: smooth;">
+                    ${groupedSessions[type].map(session => {
+                        const planner = allPlanners.find(p => p.id === session.plannerId)
+                        const plannerName = planner ? planner.name : '알 수 없음'
+                        const hasManagerAction = (session.managerAIAdvice && session.managerAIAdvice.length > 0) || (session.managerNote && session.managerNote.length > 0)
+                        const contextText = session.context.substring(0, 80) + (session.context.length > 80 ? '...' : '')
+                        const coachingPreview = session.coachingAdvice ? session.coachingAdvice.substring(0, 100) + '...' : '코칭 내용 없음'
+                        
+                        return `
+                            <div class="flex-shrink-0 w-80 bg-white border ${color.border} rounded-xl p-4 hover:shadow-xl cursor-pointer transition">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p class="text-xs text-gray-500 mb-1">${new Date(session.sessionDate).toLocaleDateString('ko-KR')}</p>
+                                        <h4 class="text-sm font-bold ${color.text}">
+                                            <i class="fas fa-user-circle mr-1"></i>${plannerName}
+                                        </h4>
+                                    </div>
+                                    ${session.effectivenessRating ? '<span class="text-sm">' + '⭐'.repeat(session.effectivenessRating) + '</span>' : ''}
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <span class="${color.bg} ${color.text} text-xs px-2 py-1 rounded-full font-semibold">${session.situationType}</span>
+                                    ${hasManagerAction ? '<span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full ml-1"><i class="fas fa-user-cog"></i></span>' : ''}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <p class="text-xs font-semibold text-gray-600 mb-1"><i class="fas fa-question-circle mr-1"></i>질문</p>
+                                    <p class="text-xs text-gray-700 line-clamp-2">${contextText}</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <p class="text-xs font-semibold text-gray-600 mb-1"><i class="fas fa-comments mr-1"></i>AI 코칭</p>
+                                    <p class="text-xs text-gray-600 line-clamp-2">${coachingPreview}</p>
+                                </div>
+                                
+                                <button onclick="openNoteModal(${session.id})" class="w-full px-3 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white text-xs rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold">
+                                    <i class="fas fa-${hasManagerAction ? 'edit' : 'plus-circle'} mr-1"></i>${hasManagerAction ? '역할 수정' : '역할 분석'}
+                                </button>
+                            </div>
+                        `
+                    }).join('')}
                 </div>
             </div>
         `
-    }).join('')
+    })
+    
+    container.innerHTML = html
 }
 
 // 필터 적용
