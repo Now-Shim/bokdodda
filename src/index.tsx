@@ -2737,6 +2737,35 @@ app.post('/api/admin/init-profile/:userId', async (c) => {
   }
 })
 
+// 자료 목록 조회 API (설계사용)
+app.get('/api/knowledge-base', async (c) => {
+  const { env } = c
+  
+  try {
+    const result = await env.DB.prepare(`
+      SELECT * FROM knowledge_base 
+      WHERE target_audience IN ('설계사용', '공용')
+      ORDER BY priority DESC, uploaded_at DESC
+    `).all()
+    
+    const knowledge = result.results.map(row => ({
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      category: row.category,
+      targetAudience: row.target_audience,
+      isPriority: row.priority === 1,
+      uploadDate: row.uploaded_at,
+      uploadedBy: row.uploaded_by
+    }))
+    
+    return c.json({ success: true, knowledge })
+  } catch (error) {
+    console.error('[자료 조회] 오류:', error)
+    return c.json({ error: '자료 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default app
 
 // ============== Frontend Routes ==============

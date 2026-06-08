@@ -1025,7 +1025,145 @@ function displayPersonalityReport(report) {
 console.log('[DEBUG] Starting initial data load...')
 loadProfile()
 loadSessions()
+loadKnowledgeBase()
 console.log('[DEBUG] Page setup complete')
+
+// 업로드된 자료 목록 로드
+let allKnowledge = []
+let currentKnowledgeCategory = 'all'
+
+async function loadKnowledgeBase() {
+    try {
+        const res = await axios.get('/api/knowledge-base')
+        allKnowledge = res.data.knowledge || []
+        
+        // 설계사용 또는 공용 자료만 필터링
+        allKnowledge = allKnowledge.filter(k => 
+            k.targetAudience === '설계사용' || k.targetAudience === '공용'
+        )
+        
+        displayKnowledge()
+    } catch (error) {
+        console.error('자료 로드 실패:', error)
+        document.getElementById('knowledgeList').innerHTML = 
+            '<p class="text-red-500 col-span-full text-center py-8">자료를 불러오는 중 오류가 발생했습니다.</p>'
+    }
+}
+
+function filterKnowledge(category) {
+    currentKnowledgeCategory = category
+    
+    // 탭 활성화 스타일 변경
+    document.querySelectorAll('.knowledge-tab').forEach(tab => {
+        if (tab.dataset.category === category) {
+            tab.className = 'knowledge-tab px-4 py-2 rounded-t-lg font-semibold transition bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+        } else {
+            tab.className = 'knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition'
+        }
+    })
+    
+    displayKnowledge()
+}
+
+function displayKnowledge() {
+    const container = document.getElementById('knowledgeList')
+    
+    let filtered = allKnowledge
+    if (currentKnowledgeCategory !== 'all') {
+        filtered = allKnowledge.filter(k => k.category === currentKnowledgeCategory)
+    }
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">해당 카테고리에 자료가 없습니다.</p>'
+        return
+    }
+    
+    // 카테고리별 색상
+    const categoryColors = {
+        '영업기법': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'fa-chart-line' },
+        '고객관리': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: 'fa-users' },
+        '상품지식': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: 'fa-file-invoice-dollar' },
+        '민원대응': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: 'fa-exclamation-triangle' },
+        '기타': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', icon: 'fa-folder' }
+    }
+    
+    container.innerHTML = filtered.map(k => {
+        const color = categoryColors[k.category] || categoryColors['기타']
+        const isPriority = k.isPriority ? '<span class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full"><i class="fas fa-star mr-1"></i>중요</span>' : ''
+        const preview = k.content.substring(0, 100) + (k.content.length > 100 ? '...' : '')
+        
+        return `
+            <div class="border ${color.border} ${color.bg} rounded-lg p-4 hover:shadow-lg transition cursor-pointer" onclick="viewKnowledge(${k.id})">
+                <div class="flex items-start justify-between mb-2">
+                    <span class="${color.text} text-sm font-semibold">
+                        <i class="fas ${color.icon} mr-1"></i>${k.category}
+                    </span>
+                    ${isPriority}
+                </div>
+                <h3 class="font-bold text-gray-800 mb-2">${escapeHtml(k.title)}</h3>
+                <p class="text-sm text-gray-600 mb-3 line-clamp-3">${escapeHtml(preview)}</p>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span><i class="far fa-calendar mr-1"></i>${new Date(k.uploadDate).toLocaleDateString('ko-KR')}</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">${k.targetAudience}</span>
+                </div>
+            </div>
+        `
+    }).join('')
+}
+
+function viewKnowledge(id) {
+    const knowledge = allKnowledge.find(k => k.id === id)
+    if (!knowledge) return
+    
+    const color = {
+        '영업기법': 'blue',
+        '고객관리': 'green',
+        '상품지식': 'purple',
+        '민원대응': 'red',
+        '기타': 'gray'
+    }[knowledge.category] || 'gray'
+    
+    const modal = document.createElement('div')
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50'
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-${color}-100 text-${color}-700 px-3 py-1 rounded-full text-sm font-semibold">
+                                ${knowledge.category}
+                            </span>
+                            ${knowledge.isPriority ? '<span class="bg-red-500 text-white px-3 py-1 rounded-full text-sm"><i class="fas fa-star mr-1"></i>중요</span>' : ''}
+                            <span class="bg-${color}-50 text-${color}-700 px-2 py-1 rounded text-xs">${knowledge.targetAudience}</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">${escapeHtml(knowledge.title)}</h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <i class="far fa-calendar mr-1"></i>${new Date(knowledge.uploadDate).toLocaleDateString('ko-KR')}
+                        </p>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="prose max-w-none">
+                    <div class="bg-gray-50 p-6 rounded-lg border-l-4 border-${color}-500">
+                        <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(knowledge.content)}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `
+    document.body.appendChild(modal)
+    
+    // 모달 외부 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove()
+        }
+    })
+}
 
 // 30초마다 자동 갱신 (새로운 코칭 세션 실시간 반영)
 setInterval(() => {

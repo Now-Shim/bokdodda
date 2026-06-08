@@ -204,6 +204,40 @@ export const plannerPageHTML = `
             </form>
         </div>
         
+        <!-- 업로드된 자료 목록 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-book-reader mr-2 text-blue-600"></i>업로드된 자료 목록
+            </h2>
+            
+            <!-- 카테고리 탭 -->
+            <div class="flex space-x-2 mb-4 border-b overflow-x-auto pb-2">
+                <button onclick="filterKnowledge('all')" data-category="all" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold transition bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                    <i class="fas fa-list mr-2"></i>전체
+                </button>
+                <button onclick="filterKnowledge('영업기법')" data-category="영업기법" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    <i class="fas fa-chart-line mr-1"></i>영업기법
+                </button>
+                <button onclick="filterKnowledge('고객관리')" data-category="고객관리" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    <i class="fas fa-users mr-1"></i>고객관리
+                </button>
+                <button onclick="filterKnowledge('상품지식')" data-category="상품지식" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    <i class="fas fa-file-invoice-dollar mr-1"></i>상품지식
+                </button>
+                <button onclick="filterKnowledge('민원대응')" data-category="민원대응" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>민원대응
+                </button>
+                <button onclick="filterKnowledge('기타')" data-category="기타" class="knowledge-tab px-4 py-2 rounded-t-lg font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    <i class="fas fa-folder mr-1"></i>기타
+                </button>
+            </div>
+            
+            <!-- 자료 목록 -->
+            <div id="knowledgeList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-500 col-span-full text-center py-8">자료를 불러오는 중...</p>
+            </div>
+        </div>
+        
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">
                 <i class="fas fa-history mr-2 text-green-600"></i>코칭 히스토리
