@@ -180,7 +180,8 @@ async function loadSessions() {
             '기존고객': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500' },
             '계약전환': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500' },
             '민원처리': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500' },
-            '팀관리': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-500' }
+            '팀관리': { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-500' },
+            '기타': { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-500' }
         }
         
         // 유형별로 수평 렌더링
